@@ -1,0 +1,93 @@
+﻿body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+table {
+    width: 80%;
+    margin: 20px auto;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid black;
+    padding: 8px;
+}
+
+.chart-container {
+    width: 80%;
+    max-width: 1000px;
+    height: 600px;
+    margin: 20px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+canvas {
+    width: 80% !important;
+    max-width: 1000px;
+    margin-top: 20px;
+}
+
+/* Fixed height and width for the chart */
+#dataChart {
+    width: 100% !important; /* Responsive width, but fixed height */
+    height: 100% !important; /* Fixed height, ensures it doesn't extend */
+}
+
+/*stuff for top bar*/
+/* Right text styles */
+.right-text {
+    font-size: 20px;
+    margin-right: 2%;
+    display: flex;
+    gap: 3%;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.top-bar {
+    background-color: #4c0099;
+    color: #fff;
+    padding: 10px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+.headerlink {
+    color: #FFFFFF; /* Change this to the color you want */
+    text-decoration: none; /* This removes the underline */
+}
+
+.content {
+    /* Adjust padding-top to make space for the fixed top bar */
+    padding-top: 60px; /* Adjust according to your top bar height */
+    /* Add other styles for your content */
+}
+
+.center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.descriptions::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.ivah, .andrew, .theo, .donovan {
+    float: left;
+    width: 25%;
+    padding: 0 10px;
+    box-sizing: border-box;
+}
