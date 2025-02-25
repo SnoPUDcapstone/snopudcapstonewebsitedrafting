@@ -22,3 +22,7 @@ More to come, will update!!
 update - [2/22/2025]
 
 frontend design draft, same backend applies
+-----------------------------------------------------------
+update - [2/25/2025]
+
+frontend design changes, in order to see previous work reroute to resource.html, follow all previous instructions
