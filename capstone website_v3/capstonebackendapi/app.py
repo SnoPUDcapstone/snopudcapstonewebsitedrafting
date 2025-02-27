@@ -1,3 +1,6 @@
+#github will not let me upload the csv file as it is too large, you will need to supply the years data, currently my program expects
+#thi argument df = pd.read_excel("AMG_Solar_2022_2023_2024.xlsx", sheet_name="2024", header=2) 
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 import pandas as pd
