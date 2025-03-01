@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -9,22 +9,63 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Would recommend not changing this section much as it just defines the top bar, and it could mess up js and css code but feel free to make alterations as needed -->
     <div class="top-bar" id="top-bar">
         <div class="left-text"><a href="index.html" class="headerlink"> Snohomish PUD - Arlington Microgrid Solar Firming Pilot Project Analysis</a></div>
         <div class="right-text">
             <a href="about.html" class="headerlink">About </a>
-            <a href="livesolarfirming.html" class="headerlink">Live Solar Firming </a>
             <a href="results.html" class="headerlink">Results </a>
             <a href="Financialanalysis.html" class="headerlink">Financial Analysis </a>
             <img src="resources\snohomishlogo.png" width="9%" height="9%" />
             <img src="resources\UWlogo.png" width="5%" height="5%" />
         </div>
     </div>
-    <!-- ------------------------------------------------------------------------------------------------------------------ -->
-    
+
     <div class="content" id="content">
-        <h1>Landing Page</h1>
+        <h1>Solar Firming</h1>
+
+        <!-- add date selection -->
+        <form id="solarForm">
+            <fieldset>
+                <legend>Enter a date range to get solar production and consumption data</legend>
+                <label for="start">Start Date</label>
+                <input type="date" name="start" placeholder="yyyy-MM-dd" required id="start">
+                <label for="end">End Date</label>
+                <input type="date" name="end" placeholder="yyyy-MM-dd" required id="end">
+                <input id="hours" name="hours" type="hidden" value="T00:00">
+                <button type="submit" id="solarSubmit">Get Solar Data</button>
+                <button type="button" id="currentDataButton">Get Current Data</button> <!-- New button -->
+            </fieldset>
+        </form>
+
+
+        <!-- add selection for persistance or soc -->
+
+        <div id="optionBox">
+            <fieldset>
+                <div class="option-box selected" data-value="option1">
+                    Solar
+                </div>
+                <div class="option-box" data-value="option2">
+                    Battery SOC
+                </div>
+            </fieldset>
+        </div>
+
+
+        <div class="chart-container">
+            <canvas id="dataChart"></canvas>
+        </div>
+
+        <div id="dataset1" class="dataset-box">Dataset 1</div>
+        <div id="dataset2" class="dataset-box">Dataset 2</div>
+        <div id="dataset3" class="dataset-box">Dataset 3</div>
+        <div id="dataset4" class="dataset-box">Dataset 4</div>
+        <div id="dataset5" class="dataset-box">Dataset 5</div>
+        <div id="dataset6" class="dataset-box">Dataset 6</div>
+
+        <!-- add analitics for currently selected datasets -->
+
+        <script src="script.js"></script>
     </div>
 </body>
 </html>
