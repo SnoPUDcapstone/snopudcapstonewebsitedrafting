@@ -94,11 +94,17 @@ def get_solar():
 #///////////////////////////////////////////////////////////////////////////////////////////
 #your code Here:                                                                                                              
 
-@app.route('/your_name_here'), methods=['GET']) #unsure of what to put here
+#good method --
+#key points: for dev ease put the name of the method in /your_name_here
+#draw data from solar_data as thats the live numpy array i pulled from data
+#worth noting that a second copy of this should probably be made to pull from selection data
+#this functionality is not yet had, will remove this comment when it is.
+
+@app.route('/30_30'), methods=['GET']) #unsure of what to put here
 def Persistence_30_30():
-  if get_selected_date_data() is not None:                      #This is needed as data initially is not populated from csv file
+  if solar_data is not None:                      #This is needed as data initially is not populated from csv file
           
-    data = np.array(get_selected_date_data())
+    data = solar_data
     prediction = np.zeros(60)
     for hour in range((int)(len(data)/60 - 1)):
         refhalfhour = data[(hour)*60:(hour+1)*60-30]
@@ -109,7 +115,6 @@ def Persistence_30_30():
     return jsonify(prediction.tolist())  # Convert NumPy array back to list for JSON
  else:
     return jsonify({"error": "Data not available yet"}), 500
-
 
 #///////////////////////////////////////////////////////////////////////////////////////////
 
