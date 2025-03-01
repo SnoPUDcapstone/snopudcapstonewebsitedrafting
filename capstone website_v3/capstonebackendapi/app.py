@@ -1,7 +1,4 @@
-#github will not let me upload the csv file as it is too large, you will need to supply the years data, currently my program expects
-#thi argument df = pd.read_excel("AMG_Solar_2022_2023_2024.xlsx", sheet_name="2024", header=2) 
-
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pandas as pd
 import numpy as np
@@ -27,20 +24,21 @@ def load_and_filter_data():
 
     while True:
         try:
+
             now = datetime.now()
             one_year_ago = now - timedelta(days=365)
+            start_time = one_year_ago - timedelta(hours=24)
+            end_time = one_year_ago
 
             #read in data and condition timestamps/////////////////////////////////////////////////////////////
             df = pd.read_excel("AMG_Solar_2022_2023_2024.xlsx", sheet_name="2024", header=2)  # Load Excel file
             df['Date and Time'] = pd.to_datetime(df['Date and Time'])
             #//////////////////////////////////////////////////////////////////////////////////////////////////
-                # Define the time range (24 hours from one year ago)
-            start_time = one_year_ago - timedelta(hours=24)
-            end_time = one_year_ago
 
                 # Filter data for the exact 24-hour window
             df_filtered = df[(df['Date and Time'] >= start_time) & (df['Date and Time'] <= end_time)]
             df_filtered = df_filtered[['Date and Time', 'Value (KW)']]
+            df_filtered['Value (KW)'] = -df_filtered['Value (KW)']
             
             df_solar = df_filtered['Value (KW)']
             solar_data = df_solar.to_numpy()
@@ -99,6 +97,30 @@ def get_solar():
 
 
 #///////////////////////////////////////////////////////////////////////////////////////////
+
+
+@app.route('/selecteddate', methods=['GET'])
+def get_selected_date_data():
+    start_date = request.args.get('start')
+    end_date = request.args.get('end')
+    
+    if not start_date or not end_date:
+        return jsonify({"error": "Start and end dates are required"}), 400
+
+    try:
+        start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
+        end_datetime = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)  # Include the end date
+
+        df = pd.read_excel("AMG_Solar_2022_2023_2024.xlsx", sheet_name="2024", header=2)
+        df['Date and Time'] = pd.to_datetime(df['Date and Time'])
+        
+        df_filtered = df[(df['Date and Time'] >= start_datetime) & (df['Date and Time'] < end_datetime)]
+        df_filtered = df_filtered[['Date and Time', 'Value (KW)']]
+        df_filtered['Value (KW)'] = -df_filtered['Value (KW)']
+        
+        return jsonify(df_filtered.to_dict(orient="records"))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/')
