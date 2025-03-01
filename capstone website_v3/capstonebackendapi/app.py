@@ -100,16 +100,69 @@ def get_solar():
 #worth noting that a second copy of this should probably be made to pull from selection data
 #this functionality is not yet had, will remove this comment when it is.
 
-@app.route('/30_30'), methods=['GET']) #unsure of what to put here
+@app.route('/30_30'), methods=['GET']) 
 def Persistence_30_30():
   if solar_data is not None:                      #This is needed as data initially is not populated from csv file
           
     data = solar_data
-    prediction = np.zeros(60)
-    for hour in range((int)(len(data)/60 - 1)):
+    prediction = np.zeros(60) 
+    for hour in range((int)(len(data)/60)): #note that all my functions assume the data starts at the first minute of an hour.
         refhalfhour = data[(hour)*60:(hour+1)*60-30]
         predictvalue = np.mean(refhalfhour)
-        prediction = np.append(prediction, np.ones(60)*predictvalue)
+        if (hour == (int)(len(data)/60 - 1)): #Ensures that the prediction continues to the current hour even if the hour is not over
+            prediction = np.append(prediction, np.ones(len(data)-len(prediction))*predictvalue)
+        else:
+            prediction = np.append(prediction, np.ones(60)*predictvalue)
+        
+
+    return jsonify(prediction.tolist())  # Convert NumPy array back to list for JSON
+ else:
+    return jsonify({"error": "Data not available yet"}), 500
+
+#///////////////////////////////////////////////////////////////////////////////////////////
+
+#///////////////////////////////////////////////////////////////////////////////////////////
+#worth noting that a second copy of this should probably be made to pull from selection data
+#this functionality is not yet had, will remove this comment when it is.
+
+@app.route('/30_60'), methods=['GET']) 
+def Persistence_30_60():
+  if solar_data is not None:                      #This is needed as data initially is not populated from csv file
+          
+    data = solar_data
+    prediction = np.zeros(60)
+    for hour in range((int)(len(data)/60)):
+        refmin = data[(hour)*60+29:(hour)*60+30]
+        predictvalue = np.mean(refmin)
+        if (hour == (int)(len(data)/60 - 1)):
+            prediction = np.append(prediction, np.ones(len(data)-len(prediction))*predictvalue)
+        else:
+            prediction = np.append(prediction, np.ones(60)*predictvalue)
+        
+
+    return jsonify(prediction.tolist())  # Convert NumPy array back to list for JSON
+ else:
+    return jsonify({"error": "Data not available yet"}), 500
+
+#///////////////////////////////////////////////////////////////////////////////////////////
+
+#///////////////////////////////////////////////////////////////////////////////////////////
+#worth noting that a second copy of this should probably be made to pull from selection data
+#this functionality is not yet had, will remove this comment when it is.
+
+@app.route('/day_before'), methods=['GET']) 
+def Persistence_day_before():
+  if solar_data is not None:                      #This is needed as data initially is not populated from csv file
+          
+    data = solar_data
+    prediction = np.zeros(1440)
+    for hour in range((int)(len(data)/60 - 23)):
+        refhour = data[(hour)*60:(hour+1)*60]
+        predictvalue = np.mean(refhour)
+        if (hour == (int)(len(data)/60 - 24)):
+            prediction = np.append(prediction, np.ones(len(data)-len(prediction))*predictvalue)
+        else:
+            prediction = np.append(prediction, np.ones(60)*predictvalue)
         
 
     return jsonify(prediction.tolist())  # Convert NumPy array back to list for JSON
@@ -128,7 +181,9 @@ def get_selected_date_data():
         return jsonify({"error": "Start and end dates are required"}), 400
 
     try:
-        start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
+        start_datetime = datetime.strptime(start_date, '%Y-%m-%d') # I am not sure exactly how this function works, but it may be a good idea to load up data for a day before the chosen date since a lot of our methods
+                                                                   # require data from the previous day, and it would look like we aren't predicting anything for the first day. If we start predicting the day before and just
+                                                                   # don't display the data or prediction from that day we could avoid the problem.
         end_datetime = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)  # Include the end date
 
         df = pd.read_excel("AMG_Solar_2022_2023_2024.xlsx", sheet_name="2024", header=2)
