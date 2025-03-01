@@ -26,3 +26,10 @@ frontend design draft, same backend applies
 update - [2/25/2025]
 
 frontend design changes, in order to see previous work reroute to resource.html, follow all previous instructions
+------------------------------------------------------------
+update - [2/28/2025]
+
+finishing up design work of landing page
+need to make buttons functional and include metrics when buttons are pressed
+--date selection is functional
+-Donovan
