@@ -1,3 +1,4 @@
+from re import S
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pandas as pd
@@ -16,6 +17,9 @@ cached_data = []
 solar_data = None
 time_data = None
 
+solar_data_selected = None
+time_data_selected = None
+
 def load_and_filter_data():
     """Loads and filters data for the 24-hour period from exactly one year ago."""
     global cached_data
@@ -32,7 +36,7 @@ def load_and_filter_data():
 
             #read in data and condition timestamps/////////////////////////////////////////////////////////////
             df = pd.read_excel("AMG_Solar_2022_2023_2024.xlsx", sheet_name="2024", header=2)  # Load Excel file
-            df['Date and Time'] = pd.to_datetime(df['Date and Time']) #NOTE: We may want to make sure that the data in column C is 'OK' and not 'UNRELIABLE'. Maybe add a filter to multiply unreliable data by 0.
+            df['Date and Time'] = pd.to_datetime(df['Date and Time'])
             #//////////////////////////////////////////////////////////////////////////////////////////////////
 
                 # Filter data for the exact 24-hour window
@@ -45,8 +49,8 @@ def load_and_filter_data():
             df_time = df_filtered['Date and Time']
             time_data = df_time.to_numpy()
             #///////////////////////////////////////////////////////////////////////////////////////////
-            ##if you need to expose further data sets do so here in the way I did in the section above
-            ##use variable one year ago as the reference point for the end of the data set currently analyzed
+            ##if you need to expose further data sets do so here in the way i did in the section above
+            ##use variable one year ago as the ref point for the end of the dat set currently analised
 
             #///////////////////////////////////////////////////////////////////////////////////////////
             # Convert DataFrame to JSON
@@ -65,6 +69,39 @@ threading.Thread(target=load_and_filter_data, daemon=True).start()
 def get_solar():
     """Returns the cached data for the last 24 hours from one year ago."""
     return jsonify(cached_data)
+
+
+@app.route('/selecteddate', methods=['GET'])
+def get_selected_date_data():
+    global solar_data_selected, time_data_selected
+
+    start_date = request.args.get('start')
+    end_date = request.args.get('end')
+    
+    if not start_date or not end_date:
+        return jsonify({"error": "Start and end dates are required"}), 400
+
+    try:
+        start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
+        end_datetime = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)  # Include the end date
+
+        df = pd.read_excel("AMG_Solar_2022_2023_2024.xlsx", sheet_name="2024", header=2)
+        df['Date and Time'] = pd.to_datetime(df['Date and Time'])
+        
+        df_filtered = df[(df['Date and Time'] >= start_datetime) & (df['Date and Time'] < end_datetime)]
+        df_filtered = df_filtered[['Date and Time', 'Value (KW)']]
+        df_filtered['Value (KW)'] = -df_filtered['Value (KW)']
+        
+        df_solar_select = df_filtered['Value (KW)']
+        solar_data_selected = df_solar_select.to_numpy()
+
+        df_time_select = df_filtered['Date and Time']
+        time_data_selected = df_time_select.to_numpy()
+
+        return jsonify(df_filtered.to_dict(orient="records"))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 #///////////////////////////////////////////////////////////////////////////////////////////
 #new method guide
@@ -92,55 +129,54 @@ def get_solar():
 #
 #worth noting that currently there is no method to dynamically fetch specific days, this can be implemented if needed though
 #///////////////////////////////////////////////////////////////////////////////////////////
-#your code Here:                                                                                                              
+#your code Here:
 
-#good method --
-#key points: for dev ease put the name of the method in /your_name_here
-#draw data from solar_data as thats the live numpy array i pulled from data
-#worth noting that a second copy of this should probably be made to pull from selection data
-#this functionality is not yet had, will remove this comment when it is.
-
-@app.route('/30_30'), methods=['GET']) #unsure of what to put here
+@app.route('/30_30', methods=['GET'])
 def Persistence_30_30():
-  if solar_data is not None:                      #This is needed as data initially is not populated from csv file
-          
-    data = solar_data
-    prediction = np.zeros(60)
-    for hour in range((int)(len(data)/60 - 1)):
-        refhalfhour = data[(hour)*60:(hour+1)*60-30]
-        predictvalue = np.mean(refhalfhour)
-        prediction = np.append(prediction, np.ones(60)*predictvalue)
+    global time_data, solar_data
+    if solar_data is not None and time_data is not None:
+        data = solar_data
+        prediction = np.zeros(60)
+        for hour in range((int)(len(data)/60 - 1)):
+            refhalfhour = data[(hour)*60:(hour+1)*60-30]
+            predictvalue = np.mean(refhalfhour)
+            prediction = np.append(prediction, np.ones(60)*predictvalue)
         
+        # Trim prediction to match the length of time_data
+        prediction = prediction[:len(time_data)]
+        
+        # Create a list of dictionaries with timestamp and prediction value
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data, prediction)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
 
-    return jsonify(prediction.tolist())  # Convert NumPy array back to list for JSON
- else:
-    return jsonify({"error": "Data not available yet"}), 500
+@app.route('/30_30selected', methods=['GET'])
+def Persistence_30_30_selected():
+    global time_data_selected, solar_data_selected
+    if solar_data_selected is not None and time_data_selected is not None:
+        data = solar_data_selected
+        prediction = np.zeros(60)
+        for hour in range((int)(len(data)/60 - 1)):
+            refhalfhour = data[(hour)*60:(hour+1)*60-30]
+            predictvalue = np.mean(refhalfhour)
+            prediction = np.append(prediction, np.ones(60)*predictvalue)
+        
+        # Trim prediction to match the length of time_data
+        prediction = prediction[:len(time_data_selected)]
+        
+        # Create a list of dictionaries with timestamp and prediction value
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected, prediction)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
 
 #///////////////////////////////////////////////////////////////////////////////////////////
 
-
-@app.route('/selecteddate', methods=['GET'])
-def get_selected_date_data():
-    start_date = request.args.get('start')
-    end_date = request.args.get('end')
-    
-    if not start_date or not end_date:
-        return jsonify({"error": "Start and end dates are required"}), 400
-
-    try:
-        start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
-        end_datetime = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)  # Include the end date
-
-        df = pd.read_excel("AMG_Solar_2022_2023_2024.xlsx", sheet_name="2024", header=2)
-        df['Date and Time'] = pd.to_datetime(df['Date and Time'])
-        
-        df_filtered = df[(df['Date and Time'] >= start_datetime) & (df['Date and Time'] < end_datetime)]
-        df_filtered = df_filtered[['Date and Time', 'Value (KW)']]
-        df_filtered['Value (KW)'] = -df_filtered['Value (KW)']
-        
-        return jsonify(df_filtered.to_dict(orient="records"))
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/')
