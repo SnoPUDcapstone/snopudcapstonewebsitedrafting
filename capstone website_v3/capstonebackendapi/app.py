@@ -252,6 +252,48 @@ def Persistence_30_60_selected():
     else:
         return jsonify({"error": "Data not available yet"}), 500
 #///////////////////////////////////////////////////////////////////////////////////////////
+# Trend model
+@app.route('/trend_model', methods=['GET'])
+def trend_model():
+    global time_data, solar_data
+    if solar_data is not None and time_data is not None:
+        predictions = []
+        for hour in range(len(solar_data) // 60 - 1):  # Loop over the data
+            target_time = time_data[hour]
+            # Find the indices of the last 60 minutes of data (1 hour back)
+            start_idx = hour * 60 - 60 
+            end_idx = hour * 60 - 30 
+
+            if start_idx >= 0 and end_idx >= 0:
+                past_window = solar_data[start_idx:end_idx]
+            else:
+                past_window = []
+            # Calculate the average solar value based on past data (from 31 and 1441 shifts)
+            if len(past_window) >= 2:
+                recent_slope = (past_window[-1] - past_window[0]) / len(past_window)
+            else:
+                recent_slope = 0  # No valid slope if there's insufficient data
+            
+            # Max solar limit (based on the month)
+            # current_month = target_time.month
+            # max_solar_limit = 445 if 6 <= current_month <= 8 else 500
+            max_solar_limit = 500
+            max_correction = 35
+            correction = np.clip(recent_slope * 30, -max_correction, max_correction)
+
+            # Compute the forecasted value using the slope correction
+            forecasted_value = np.clip(np.mean(solar_data[start_idx:end_idx]) + correction, 0, max_solar_limit)
+            predictions.extend([forecasted_value] * 60)
+        
+        # Trim predictions to the length of time_data if necessary
+        predictions = predictions[:len(time_data)]
+        result = [{"Date and Time": str(t), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data, predictions)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
 
 
 @app.route('/')
