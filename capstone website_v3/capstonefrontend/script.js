@@ -4,6 +4,8 @@ const API_URL_30_30 = "http://localhost:5555/30_30";
 const API_URL_30_30selected = "http://localhost:5555/30_30selected";
 const API_30_60 = "http://localhost:5555/30_60";
 const API_30_60_selected = "http://localhost:5555/30_60selected";
+const API_URL_trend = "http://localhost:5555/trend_model"
+const API_URL_trend_selected = "http://localhost:5555/trend_selected"
 
 // Function to fetch initial data from API
 async function fetchData() {
@@ -45,6 +47,22 @@ async function fetch30_60Data(useSelected = false) {
         addDatasetToChart(data, useSelected ? "30_60 Selected Data" : "30_60 Data", "green"); // Using green to differentiate
     } catch (error) {
         console.error("Error fetching 30_60 data:", error);
+    }
+}
+
+// Fetch trend data (new function)
+async function fetchTrendData(useSelected = false) {
+    const url = useSelected ? API_URL_trend_selected : API_URL_trend;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        addDatasetToChart(data, useSelected ? "Trend Selected Data": "Trend Data", "orange");
+    } catch (error) {
+        console.error("error fetching trend data:", error);
     }
 }
 
@@ -115,6 +133,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    const dataset3 = document.getElementById('dataset3');
+    dataset3.addEventListener('click', () => {
+        dataset3.classList.toggle('active');
+
+        const startDate = document.getElementById('start').value;
+        const endDate = document.getElementById('end').value;
+
+        const useSelected = dataset3.classList.contains('active') && startDate && endDate;
+
+        if (dataset3.classList.contains('active')) {
+            fetchTrendData(useSelected);
+        } else {
+            removeDatasetFromChart(["Trend Data", "Trend Selected Data"]);
+        }
+    });
+
     const optionBoxes = document.querySelectorAll('#optionBox .option-box');
     optionBoxes.forEach(box => {
         box.addEventListener('click', () => {
@@ -174,7 +208,9 @@ async function handleFormSubmit(event) {
         if (dataset2.classList.contains('active')) {
             await fetch30_60Data(true);
         }
-
+        if (dataset3.classList.contains('active')) {
+            await fetchTrendData(true);
+        }
         updateChart(data);
     } catch (error) {
         console.error("Error fetching selected date data:", error);
