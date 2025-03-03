@@ -2,19 +2,10 @@ const API_URL = "http://localhost:5555/data";
 const API_URL2 = "http://localhost:5555/selecteddate";
 const API_URL_30_30 = "http://localhost:5555/30_30";
 const API_URL_30_30selected = "http://localhost:5555/30_30selected";
-//
-//edit as following
-//methods --  fetch data
-//            create datasets
-//            process and create chart
-//
+const API_30_60 = "http://localhost:5555/30_60";
+const API_30_60_selected = "http://localhost:5555/30_60selected";
 
-
-
-
-
-
-// Function to fetch data from API
+// Function to fetch initial data from API
 async function fetchData() {
     try {
         const response = await fetch(API_URL);
@@ -25,11 +16,9 @@ async function fetchData() {
     }
 }
 
-
-
-//////////////////////////////////////////////////
+// Fetch 30_30 data
 async function fetch30_30Data(useSelected = false) {
-    const url = useSelected ? "http://localhost:5555/30_30selected" : API_URL_30_30;
+    const url = useSelected ? API_URL_30_30selected : API_URL_30_30;
 
     try {
         const response = await fetch(url);
@@ -37,12 +26,29 @@ async function fetch30_30Data(useSelected = false) {
             throw new Error('Network response was not ok');
         }
         const data = await response.json();
-        addDatasetToChart(data, useSelected ? "30_30 Selected Data" : "30_30 Data", useSelected ? "green" : "red");
+        addDatasetToChart(data, useSelected ? "30_30 Selected Data" : "30_30 Data", "red");
     } catch (error) {
         console.error("Error fetching 30_30 data:", error);
     }
 }
 
+// Fetch 30_60 data (new function)
+async function fetch30_60Data(useSelected = false) {
+    const url = useSelected ? API_30_60_selected : API_30_60;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        addDatasetToChart(data, useSelected ? "30_60 Selected Data" : "30_60 Data", "green"); // Using green to differentiate
+    } catch (error) {
+        console.error("Error fetching 30_60 data:", error);
+    }
+}
+
+// Add dataset to chart
 function addDatasetToChart(data, label, color) {
     const dates = data.map(row => new Date(row["Date and Time"]).toLocaleString());
     const values = data.map(row => row["Value (KW)"]);
@@ -61,22 +67,7 @@ function addDatasetToChart(data, label, color) {
     }
 }
 
-dataset1.addEventListener('click', () => {
-    dataset1.classList.toggle('active');
-
-    const startDate = document.getElementById('start').value;
-    const endDate = document.getElementById('end').value;
-
-    // **Check if date inputs are actually filled**
-    const useSelected = dataset1.classList.contains('active') && startDate && endDate;
-
-    if (dataset1.classList.contains('active')) {
-        fetch30_30Data(useSelected);
-    } else {
-        removeDatasetFromChart(["30_30 Data", "30_30 Selected Data"]);
-    }
-});
-
+// Remove dataset from chart
 function removeDatasetFromChart(labels) {
     if (window.myChart) {
         window.myChart.data.datasets = window.myChart.data.datasets.filter(dataset => !labels.includes(dataset.label));
@@ -84,8 +75,7 @@ function removeDatasetFromChart(labels) {
     }
 }
 
-////////////////////////////////////////////////
-
+// Event listeners
 document.addEventListener('DOMContentLoaded', () => {
     const solarForm = document.getElementById('solarForm');
     solarForm.addEventListener('submit', handleFormSubmit);
@@ -93,31 +83,53 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentDataButton = document.getElementById('currentDataButton');
     currentDataButton.addEventListener('click', fetchInitialData);
 
+    const dataset1 = document.getElementById('dataset1');
+    dataset1.addEventListener('click', () => {
+        dataset1.classList.toggle('active');
+
+        const startDate = document.getElementById('start').value;
+        const endDate = document.getElementById('end').value;
+
+        const useSelected = dataset1.classList.contains('active') && startDate && endDate;
+
+        if (dataset1.classList.contains('active')) {
+            fetch30_30Data(useSelected);
+        } else {
+            removeDatasetFromChart(["30_30 Data", "30_30 Selected Data"]);
+        }
+    });
+
+    const dataset2 = document.getElementById('dataset2'); // Assuming dataset2 exists in HTML
+    dataset2.addEventListener('click', () => {
+        dataset2.classList.toggle('active');
+
+        const startDate = document.getElementById('start').value;
+        const endDate = document.getElementById('end').value;
+
+        const useSelected = dataset2.classList.contains('active') && startDate && endDate;
+
+        if (dataset2.classList.contains('active')) {
+            fetch30_60Data(useSelected);
+        } else {
+            removeDatasetFromChart(["30_60 Data", "30_60 Selected Data"]);
+        }
+    });
 
     const optionBoxes = document.querySelectorAll('#optionBox .option-box');
-
     optionBoxes.forEach(box => {
         box.addEventListener('click', () => {
-            // Remove 'selected' class from all boxes
             optionBoxes.forEach(b => b.classList.remove('selected'));
-
-            // Add 'selected' class to clicked box
             box.classList.add('selected');
-
-            // Here you can add logic to handle the selection change
             const selectedValue = box.getAttribute('data-value');
             console.log('Selected option:', selectedValue);
-            // You can call a function here to update the chart based on the selected option
         });
     });
 
-    // Ensure the first option (Solar) is selected by default
     optionBoxes[0].classList.add('selected');
-
-    // Initial data load
-    fetchData();
+    fetchData(); // Initial data load
 });
 
+// Fetch initial data
 async function fetchInitialData() {
     try {
         const response = await fetch(API_URL);
@@ -126,26 +138,24 @@ async function fetchInitialData() {
         }
         const data = await response.json();
 
-        // Reset chart to current data
         updateChart(data);
+        removeDatasetFromChart(["30_30 Selected Data", "30_60 Selected Data"]);
 
-        // Remove "30_30 Selected Data" and switch back to "30_30 Data"
-        removeDatasetFromChart(["30_30 Selected Data"]);
-
-        // **Reset Date Inputs to ensure toggle switches to /30_30**
         document.getElementById('start').value = "";
         document.getElementById('end').value = "";
 
-        // Ensure dataset1 fetches the correct /30_30 when toggled on
         if (dataset1.classList.contains('active')) {
-            fetch30_30Data(false);  // Reset to /30_30
+            fetch30_30Data(false);
         }
-
+        if (dataset2.classList.contains('active')) {
+            fetch30_60Data(false);
+        }
     } catch (error) {
         console.error("Error fetching initial data:", error);
     }
 }
 
+// Handle form submission
 async function handleFormSubmit(event) {
     event.preventDefault();
     const startDate = document.getElementById('start').value;
@@ -158,14 +168,20 @@ async function handleFormSubmit(event) {
         }
         const data = await response.json();
 
-        // When using selected data, fetch from /30_30selected instead of /30_30
-        await fetch30_30Data(true);
+        if (dataset1.classList.contains('active')) {
+            await fetch30_30Data(true);
+        }
+        if (dataset2.classList.contains('active')) {
+            await fetch30_60Data(true);
+        }
 
         updateChart(data);
     } catch (error) {
         console.error("Error fetching selected date data:", error);
     }
 }
+
+// Update chart
 function updateChart(data) {
     const ctx = document.getElementById("dataChart").getContext("2d");
 
@@ -212,10 +228,8 @@ function updateChart(data) {
     });
 }
 
-
-//stuff for top bar
+// Sticky top bar
 window.onscroll = function () { stickyTopBar() };
-
 var topBar = document.getElementById("top-bar");
 var sticky = topBar.offsetTop;
 
@@ -227,5 +241,5 @@ function stickyTopBar() {
     }
 }
 
-
+// Initial fetch
 fetchData();
