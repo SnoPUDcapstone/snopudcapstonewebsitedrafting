@@ -14,6 +14,7 @@ wsgi_app = app.wsgi_app
 
 # Global variable to store filtered data
 cached_data = []
+
 solar_data = None
 time_data = None
 
@@ -21,54 +22,58 @@ solar_data_selected = None
 time_data_selected = None
 
 def load_and_filter_data():
-    """Loads and filters data for the 24-hour period from exactly one year ago."""
+    """Loads and filters data for a 48-hour period into solar_data/time_data, and the last 24 hours into cached_data."""
     global cached_data
     global solar_data
     global time_data
 
     while True:
         try:
-
             now = datetime.now()
             one_year_ago = now - timedelta(days=365)
-            start_time = one_year_ago - timedelta(hours=24)
-            end_time = one_year_ago
+            start_time_48h = one_year_ago - timedelta(hours=48)  # Start of the 48-hour window
+            start_time_24h = one_year_ago - timedelta(hours=24)  # Start of the 24-hour window
+            end_time = one_year_ago                             # End of both windows (one year ago)
 
-            #read in data and condition timestamps/////////////////////////////////////////////////////////////
-            df = pd.read_excel("AMG_Solar_2022_2023_2024.xlsx", sheet_name="2024", header=2)  # Load Excel file
+            # Read in data and condition timestamps
+            df = pd.read_excel("AMG_Solar_2022_2023_2024.xlsx", sheet_name="2024", header=2)
             df['Date and Time'] = pd.to_datetime(df['Date and Time'])
-            #//////////////////////////////////////////////////////////////////////////////////////////////////
 
-                # Filter data for the exact 24-hour window
-            df_filtered = df[(df['Date and Time'] >= start_time) & (df['Date and Time'] <= end_time)]
-            df_filtered = df_filtered[['Date and Time', 'Value (KW)']]
-            df_filtered['Value (KW)'] = -df_filtered['Value (KW)']
-            
-            df_solar = df_filtered['Value (KW)']
+            # Filter data for the full 48-hour window (for solar_data and time_data)
+            df_filtered_48h = df[(df['Date and Time'] >= start_time_48h) & (df['Date and Time'] <= end_time)]
+            df_filtered_48h = df_filtered_48h[['Date and Time', 'Value (KW)']]
+            df_filtered_48h['Value (KW)'] = -df_filtered_48h['Value (KW)']
+
+            # Assign the 48-hour data to solar_data and time_data
+            df_solar = df_filtered_48h['Value (KW)']
             solar_data = df_solar.to_numpy()
-            df_time = df_filtered['Date and Time']
+            df_time = df_filtered_48h['Date and Time']
             time_data = df_time.to_numpy()
-            #///////////////////////////////////////////////////////////////////////////////////////////
-            ##if you need to expose further data sets do so here in the way i did in the section above
-            ##use variable one year ago as the ref point for the end of the dat set currently analised
 
-            #///////////////////////////////////////////////////////////////////////////////////////////
-            # Convert DataFrame to JSON
-            cached_data = df_filtered.to_dict(orient="records")
-            print(f"Data updated for {start_time} to {end_time}")  # Log the update
+            # Filter data for the last 24-hour window (for cached_data)
+            df_filtered_24h = df[(df['Date and Time'] >= start_time_24h) & (df['Date and Time'] <= end_time)]
+            df_filtered_24h = df_filtered_24h[['Date and Time', 'Value (KW)']]
+            df_filtered_24h['Value (KW)'] = -df_filtered_24h['Value (KW)']
+
+            # Convert the 24-hour DataFrame to JSON for cached_data
+            cached_data = df_filtered_24h.to_dict(orient="records")
+            print(f"48-hour data updated for {start_time_48h} to {end_time}")
+            print(f"24-hour cached data updated for {start_time_24h} to {end_time}")
 
         except Exception as e:
             print(f"Error updating data: {e}")
         time.sleep(60)  # Wait for 1 minute before updating again
 
-#continually run above method to update data each min
+# Continually run the method to update data each minute
 threading.Thread(target=load_and_filter_data, daemon=True).start()
+
 
 #raw solar data
 @app.route('/data', methods=['GET'])
 def get_solar():
     """Returns the cached data for the last 24 hours from one year ago."""
     return jsonify(cached_data)
+
 
 
 @app.route('/selecteddate', methods=['GET'])
@@ -82,26 +87,38 @@ def get_selected_date_data():
         return jsonify({"error": "Start and end dates are required"}), 400
 
     try:
+        # Parse the selected date range
         start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
         end_datetime = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)  # Include the end date
 
+        # Extend the start time by 24 hours for solar_data_selected and time_data_selected
+        extended_start_datetime = start_datetime - timedelta(hours=24)
+
+        # Load and preprocess the Excel data
         df = pd.read_excel("AMG_Solar_2022_2023_2024.xlsx", sheet_name="2024", header=2)
         df['Date and Time'] = pd.to_datetime(df['Date and Time'])
-        
-        df_filtered = df[(df['Date and Time'] >= start_datetime) & (df['Date and Time'] < end_datetime)]
-        df_filtered = df_filtered[['Date and Time', 'Value (KW)']]
-        df_filtered['Value (KW)'] = -df_filtered['Value (KW)']
-        
-        df_solar_select = df_filtered['Value (KW)']
-        solar_data_selected = df_solar_select.to_numpy()
 
-        df_time_select = df_filtered['Date and Time']
+        # Filter for the extended 48-hour window (for solar_data_selected and time_data_selected)
+        df_filtered_extended = df[(df['Date and Time'] >= extended_start_datetime) & (df['Date and Time'] < end_datetime)]
+        df_filtered_extended = df_filtered_extended[['Date and Time', 'Value (KW)']]
+        df_filtered_extended['Value (KW)'] = -df_filtered_extended['Value (KW)']
+
+        # Assign the 48-hour data to solar_data_selected and time_data_selected
+        df_solar_select = df_filtered_extended['Value (KW)']
+        solar_data_selected = df_solar_select.to_numpy()
+        df_time_select = df_filtered_extended['Date and Time']
         time_data_selected = df_time_select.to_numpy()
 
-        return jsonify(df_filtered.to_dict(orient="records"))
+        # Filter for the original 24-hour window (for API response)
+        df_filtered_api = df[(df['Date and Time'] >= start_datetime) & (df['Date and Time'] < end_datetime)]
+        df_filtered_api = df_filtered_api[['Date and Time', 'Value (KW)']]
+        df_filtered_api['Value (KW)'] = -df_filtered_api['Value (KW)']
+
+        # Return only the selected 24-hour range to the API
+        return jsonify(df_filtered_api.to_dict(orient="records"))
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 #///////////////////////////////////////////////////////////////////////////////////////////
 #new method guide
@@ -135,7 +152,7 @@ def get_selected_date_data():
 def Persistence_30_30():
     global time_data, solar_data
     if solar_data is not None and time_data is not None:
-        data = solar_data
+        data = solar_data[1440:]
         prediction = np.zeros(60)
         for hour in range((int)(len(data)/60 - 1)):
             refhalfhour = data[(hour)*60:(hour+1)*60-30]
@@ -143,11 +160,11 @@ def Persistence_30_30():
             prediction = np.append(prediction, np.ones(60)*predictvalue)
         
         # Trim prediction to match the length of time_data
-        prediction = prediction[:len(time_data)]
+        prediction = prediction[:len(time_data[1440:])]
         
         # Create a list of dictionaries with timestamp and prediction value
         result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
-                  for t, p in zip(time_data, prediction)]
+                  for t, p in zip(time_data[1440:], prediction)]
         
         return jsonify(result)
     else:
@@ -157,7 +174,7 @@ def Persistence_30_30():
 def Persistence_30_30_selected():
     global time_data_selected, solar_data_selected
     if solar_data_selected is not None and time_data_selected is not None:
-        data = solar_data_selected
+        data = solar_data_selected[1440:]
         prediction = np.zeros(60)
         for hour in range((int)(len(data)/60 - 1)):
             refhalfhour = data[(hour)*60:(hour+1)*60-30]
@@ -165,18 +182,76 @@ def Persistence_30_30_selected():
             prediction = np.append(prediction, np.ones(60)*predictvalue)
         
         # Trim prediction to match the length of time_data
-        prediction = prediction[:len(time_data_selected)]
+        prediction = prediction[:len(time_data_selected[1440:])]
         
         # Create a list of dictionaries with timestamp and prediction value
         result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
-                  for t, p in zip(time_data_selected, prediction)]
+                  for t, p in zip(time_data_selected[1440:], prediction)]
         
         return jsonify(result)
     else:
         return jsonify({"error": "Data not available yet"}), 500
 
-#///////////////////////////////////////////////////////////////////////////////////////////
 
+#///////////////////////////////////////////////////////////////////////////////////////////
+#///////////////////////////////////////////////////////////////////////////////////////////
+#worth noting that a second copy of this should probably be made to pull from selection data
+#this functionality is not yet had, will remove this comment when it is.
+
+@app.route('/30_60', methods=['GET'])
+def Persistence_30_60():
+    global time_data, solar_data
+    if solar_data is not None and time_data is not None:  # Check both solar_data and time_data
+        data = solar_data[1440:]  # Use only the last 24 hours (assuming 2880 total minutes)
+        prediction = np.zeros(60)  # Initial 60 zeros for the first hour
+        for hour in range((int)(len(data) / 60)):
+            refmin = data[(hour) * 60 + 29:(hour) * 60 + 30]  # 30th minute of the hour
+            predictvalue = np.mean(refmin)
+            if hour == (int)(len(data) / 60 - 1):  # Last partial hour
+                remaining_length = len(data) - len(prediction)
+                prediction = np.append(prediction, np.ones(remaining_length) * predictvalue)
+            else:
+                prediction = np.append(prediction, np.ones(60) * predictvalue)
+
+        # Trim prediction to match the length of time_data[1440:]
+        prediction = prediction[:len(time_data[1440:])]
+
+        # Create a list of dictionaries with timestamp and prediction value
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data[1440:], prediction)]
+
+        return jsonify(result)  # Return as JSON
+
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/30_60selected', methods=['GET'])
+def Persistence_30_60_selected():
+    global time_data_selected, solar_data_selected
+    if solar_data_selected is not None and time_data_selected is not None:  # Check both solar_data and time_data
+        data = solar_data_selected[1440:]  # Use only the last 24 hours (assuming 2880 total minutes)
+        prediction = np.zeros(60)  # Initial 60 zeros for the first hour
+        for hour in range((int)(len(data) / 60)):
+            refmin = data[(hour) * 60 + 29:(hour) * 60 + 30]  # 30th minute of the hour
+            predictvalue = np.mean(refmin)
+            if hour == (int)(len(data) / 60 - 1):  # Last partial hour
+                remaining_length = len(data) - len(prediction)
+                prediction = np.append(prediction, np.ones(remaining_length) * predictvalue)
+            else:
+                prediction = np.append(prediction, np.ones(60) * predictvalue)
+
+        # Trim prediction to match the length of time_data[1440:]
+        prediction = prediction[:len(time_data_selected[1440:])]
+
+        # Create a list of dictionaries with timestamp and prediction value
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], prediction)]
+
+        return jsonify(result)  # Return as JSON
+
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+#///////////////////////////////////////////////////////////////////////////////////////////
 
 
 @app.route('/')
