@@ -288,7 +288,6 @@ def trend_model():
             max_solar_limit = 500
             max_correction = 35
             correction = np.clip(recent_slope * 30, -max_correction, max_correction)
-            print(f"correction: {correction}")
 
             # Calculate forecasted value
             forecasted_value = np.clip(total_avg + correction, 0, max_solar_limit)
@@ -323,10 +322,11 @@ def trend_model_selected():
             idx_24hr_before = current_idx - (24 * 60)  # 24 hours before
             idx_30min_before = current_idx - 30  # 30 minutes before
             
-            if idx_24hr_before >= 0:
-                total_avg = np.mean(data[idx_24hr_before:idx_30min_before])
+            # Check if the indices are within the data range and compute the average
+            if idx_24hr_before < idx_30min_before:
+                total_avg = (data[idx_24hr_before] + data[idx_30min_before]) / 2
             else:
-                total_avg = np.mean(data[:idx_30min_before]) if idx_30min_before > 0 else 0
+                total_avg = 0
 
             if start_idx >= 0 and end_idx >= 0:
                 past_window =data[start_idx:end_idx]
@@ -363,4 +363,4 @@ if __name__ == '__main__':
         PORT = int(os.environ.get('SERVER_PORT', '5555'))
     except ValueError:
         PORT = 5555
-    app.run(host=HOST, port=PORT, debug=True)
+    app.run(host=HOST, port=PORT, debug=False)
