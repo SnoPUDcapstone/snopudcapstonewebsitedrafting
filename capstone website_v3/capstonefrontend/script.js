@@ -1,11 +1,17 @@
 const API_URL = "http://localhost:5555/data";
 const API_URL2 = "http://localhost:5555/selecteddate";
+
 const API_URL_30_30 = "http://localhost:5555/30_30";
 const API_URL_30_30selected = "http://localhost:5555/30_30selected";
+
 const API_30_60 = "http://localhost:5555/30_60";
 const API_30_60_selected = "http://localhost:5555/30_60selected";
+
 const API_URL_trend = "http://localhost:5555/trend_model"
 const API_URL_trend_selected = "http://localhost:5555/trend_selected"
+
+const API_URL_proportional = "http://localhost:5555/proportional"
+const API_URL_proportional_selected = "http://localhost:5555/proportional_selected"
 
 // Function to fetch initial data from API
 async function fetchData() {
@@ -63,6 +69,21 @@ async function fetchTrendData(useSelected = false) {
         addDatasetToChart(data, useSelected ? "Trend Selected Data": "Trend Data", "orange");
     } catch (error) {
         console.error("error fetching trend data:", error);
+    }
+}
+
+async function fetchProportionalData(useSelected = false) {
+    const url = useSelected ? API_URL_proportional_selected : API_URL_proportional;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        addDatasetToChart(data, useSelected ? "Proportional Selected Data" : "Proportional Data", "purple"); // Using purple to differentiate
+    } catch (error) {
+        console.error("Error fetching proportional data:", error);
     }
 }
 
@@ -149,6 +170,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    const dataset4 = document.getElementById('dataset4');
+    dataset4.addEventListener('click', () => {
+        dataset4.classList.toggle('active');
+
+        const startDate = document.getElementById('start').value;
+        const endDate = document.getElementById('end').value;
+
+        const useSelected = dataset4.classList.contains('active') && startDate && endDate;
+
+        if (dataset4.classList.contains('active')) {
+            fetchProportionalData(useSelected);
+        } else {
+            removeDatasetFromChart(["Proportional Data", "Proportional Selected Data"]);
+        }
+    });
+
     const optionBoxes = document.querySelectorAll('#optionBox .option-box');
     optionBoxes.forEach(box => {
         box.addEventListener('click', () => {
@@ -173,7 +210,7 @@ async function fetchInitialData() {
         const data = await response.json();
 
         updateChart(data);
-        removeDatasetFromChart(["30_30 Selected Data", "30_60 Selected Data"]);
+        removeDatasetFromChart(["30_30 Selected Data", "30_60 Selected Data", "Proportional Selected Data"]);
 
         document.getElementById('start').value = "";
         document.getElementById('end').value = "";
@@ -184,10 +221,17 @@ async function fetchInitialData() {
         if (dataset2.classList.contains('active')) {
             fetch30_60Data(false);
         }
+        if (dataset3.classList.contains('active')) {
+            fetchTrendData(false);
+        }
+        if (dataset4.classList.contains('active')) {
+            fetchProportionalData(false);
+        }
     } catch (error) {
         console.error("Error fetching initial data:", error);
     }
 }
+
 
 // Handle form submission
 async function handleFormSubmit(event) {
@@ -210,6 +254,9 @@ async function handleFormSubmit(event) {
         }
         if (dataset3.classList.contains('active')) {
             await fetchTrendData(true);
+        }
+        if (dataset4.classList.contains('active')) {
+            await fetchProportionalData(true);
         }
         updateChart(data);
     } catch (error) {
@@ -279,3 +326,4 @@ function stickyTopBar() {
 
 // Initial fetch
 fetchData();
+
