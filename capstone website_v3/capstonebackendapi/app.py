@@ -312,7 +312,7 @@ def trend_model_selected():
         data = solar_data_selected[1440:]  # Use only the last 24 hours (assuming 2880 total minutes)
         predictions = []
         for hour in range(len(data) // 60 - 1):  # Loop over the data
-            target_time = time_data[hour]
+            target_time = time_data_selected[hour]
             # Find the indices of the last 60 minutes of data (1 hour back)
             start_idx = hour * 60 - 60 
             end_idx = hour * 60 - 30 
@@ -345,13 +345,14 @@ def trend_model_selected():
             forecasted_value = np.clip(total_avg + correction, 0, max_solar_limit)
             predictions.extend([forecasted_value] * 60)
         
-        predictions = predictions[:len(time_data[1440:])]
+        predictions = predictions[:len(time_data_selected[1440:])]
         result = [{"Date and Time": str(t), "Value (KW)": float(p)} 
                   for t, p in zip(time_data_selected[1440:], predictions)]
         
         return jsonify(result)
     else:
         return jsonify({"error": "Data not available yet"}), 500
+#///////////////////////////////////////////////////////////////////////////////////////////////
 
 @app.route('/')
 def hello():
