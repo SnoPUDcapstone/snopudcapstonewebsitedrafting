@@ -354,6 +354,108 @@ def trend_model_selected():
         return jsonify({"error": "Data not available yet"}), 500
 #///////////////////////////////////////////////////////////////////////////////////////////////
 
+#///////////////////////////////////////////////////////////////////////////////////////////////
+
+@app.route('/proportional', methods=['GET'])
+def Proportional():
+    global time_data, solar_data
+    
+    if solar_data is not None and time_data is not None:
+        # Convert time_data to Pandas DataFrame
+        df = pd.DataFrame({'Date & Time': time_data, 'Solar [kW]': solar_data})
+
+        # Ensure the 'Date & Time' column is sorted and in datetime format
+        df['Date & Time'] = pd.to_datetime(df['Date & Time'])
+        df = df.sort_values(by='Date & Time').reset_index(drop=True)
+
+        # Compute ratio
+        ratio = df['Solar [kW]'].shift(31) / df['Solar [kW]'].shift(1471)
+
+        # Apply proportional algorithm
+        df['proportional'] = np.where(
+            (ratio < 0.7) | (ratio > 1.3),  # Condition: ratio < 30% or > 130%
+            (df['Solar [kW]'].shift(31) * 0.6 + df['Solar [kW]'].shift(1411) * 0.4),  # If true
+            ratio * df['Solar [kW]'].shift(1411)  # If false
+        )
+
+        # Loop to maintain persistence for a 60-minute block
+        for i in range(len(df)):
+            if i % 60 == 0:  # Only update at the start of an hour
+                persistence_value = df.loc[i, 'proportional']
+            df.loc[i, 'proportional_1d_30m'] = persistence_value
+
+        # Fill NaN values with 0
+        df['proportional_1d_30m'].fillna(0, inplace=True)
+
+        # Extract only the last 1440 minutes (24 hours)
+        df_filtered = df.iloc[1440:]
+        
+        #change to numpy for ouput
+        timepropotional  = df_filtered['Date & Time'].to_numpy()
+        solarproportional = df_filtered['proportional_1d_30m'].to_numpy()
+
+        # Format results as JSON
+        result = [
+            {"Date and Time": t.astype(str), "Value (KW)": float(p)}
+            for t, p in zip(timepropotional, solarproportional)
+        ]
+
+        return jsonify(result)  # Return as JSON
+
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+
+@app.route('/proportional_selected', methods=['GET'])
+def proportional_selected():
+    global time_data_selected, solar_data_selected
+
+    if solar_data_selected is not None and time_data_selected is not None:
+        # Convert to DataFrame
+        df_selected = pd.DataFrame({'Date & Time': time_data_selected, 'Solar [kW]': solar_data_selected})
+
+        # Ensure proper datetime format and sorting
+        df_selected['Date & Time'] = pd.to_datetime(df_selected['Date & Time'])
+        df_selected = df_selected.sort_values(by='Date & Time').reset_index(drop=True)
+
+        # Compute ratio
+        ratio = df_selected['Solar [kW]'].shift(31) / df_selected['Solar [kW]'].shift(1471)
+
+        # Apply proportional forecasting algorithm
+        df_selected['proportional_1d_30m'] = np.where(
+            (ratio < 0.7) | (ratio > 1.3),  # Condition: ratio < 30% or > 130%
+            (df_selected['Solar [kW]'].shift(31) * 0.6 + df_selected['Solar [kW]'].shift(1411) * 0.4),  # If true
+            ratio * df_selected['Solar [kW]'].shift(1411)  # If false
+        )
+
+        # Maintain persistence for 60-minute blocks
+        for i in range(len(df_selected)):
+            if i % 60 == 0:  # Update persistence value at the start of each hour
+                persistence_value = df_selected.loc[i, 'proportional_1d_30m']
+            df_selected.loc[i, 'proportional_1d_30m'] = persistence_value
+
+        # Fill NaN values with 0
+        df_selected['proportional_1d_30m'].fillna(0, inplace=True)
+
+        # Extract only the last 1440 minutes (24 hours)
+        df_filtered = df_selected.iloc[1440:]
+
+        #change to numpy for output
+        timeproportionalselected = df_filtered['Date & Time'].to_numpy()
+        solarproportionalselected = df_filtered['proportional_1d_30m'].to_numpy()
+
+        # Format results as JSON
+        result = [
+            {"Date and Time": t.astype(str), "Value (KW)": float(p)}
+            for t, p in zip(timeproportionalselected, solarproportionalselected)
+        ]
+
+        return jsonify(result)  # Return as JSON
+
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+#///////////////////////////////////////////////////////////////////////////////////////////////
+
 @app.route('/')
 def hello():
     return "API is running! Access past 24-hour data at /data"
