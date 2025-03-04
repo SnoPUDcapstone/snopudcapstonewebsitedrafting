@@ -13,6 +13,9 @@ const API_URL_trend_selected = "http://localhost:5555/trend_selected"
 const API_URL_proportional = "http://localhost:5555/proportional"
 const API_URL_proportional_selected = "http://localhost:5555/proportional_selected"
 
+const API_URL_averaged = "http://localhost:5555/averaged"
+const API_URL_averaged_selected = "http://localhost:5555/averagedselected"
+
 // Function to fetch initial data from API
 async function fetchData() {
     try {
@@ -84,6 +87,21 @@ async function fetchProportionalData(useSelected = false) {
         addDatasetToChart(data, useSelected ? "Proportional Selected Data" : "Proportional Data", "purple"); // Using purple to differentiate
     } catch (error) {
         console.error("Error fetching proportional data:", error);
+    }
+}
+
+async function fetchAveragedData(useSelected = false) {
+    const url = useSelected ? API_URL_averaged_selected : API_URL_averaged;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        addDatasetToChart(data, useSelected ? "Averaged Selected Data" : "Averaged Data", "cyan"); // Using cyan to differentiate
+    } catch (error) {
+        console.error("Error fetching averaged data:", error);
     }
 }
 
@@ -186,6 +204,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    const dataset5 = document.getElementById('dataset5');
+    dataset5.addEventListener('click', () => {
+        dataset5.classList.toggle('active');
+
+        const startDate = document.getElementById('start').value;
+        const endDate = document.getElementById('end').value;
+
+        const useSelected = dataset5.classList.contains('active') && startDate && endDate;
+
+        if (dataset5.classList.contains('active')) {
+            fetchAveragedData(useSelected);
+        } else {
+            removeDatasetFromChart(["Averaged Data", "Averaged Selected Data"]);
+        }
+    });
+
     const optionBoxes = document.querySelectorAll('#optionBox .option-box');
     optionBoxes.forEach(box => {
         box.addEventListener('click', () => {
@@ -200,7 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchData(); // Initial data load
 });
 
-// Fetch initial data
 async function fetchInitialData() {
     try {
         const response = await fetch(API_URL);
@@ -210,7 +243,12 @@ async function fetchInitialData() {
         const data = await response.json();
 
         updateChart(data);
-        removeDatasetFromChart(["30_30 Selected Data", "30_60 Selected Data", "Proportional Selected Data"]);
+        removeDatasetFromChart([
+            "30_30 Selected Data",
+            "30_60 Selected Data",
+            "Proportional Selected Data",
+            "Averaged Selected Data"
+        ]);
 
         document.getElementById('start').value = "";
         document.getElementById('end').value = "";
@@ -226,6 +264,9 @@ async function fetchInitialData() {
         }
         if (dataset4.classList.contains('active')) {
             fetchProportionalData(false);
+        }
+        if (dataset5.classList.contains('active')) {
+            fetchAveragedData(false);
         }
     } catch (error) {
         console.error("Error fetching initial data:", error);
@@ -258,11 +299,16 @@ async function handleFormSubmit(event) {
         if (dataset4.classList.contains('active')) {
             await fetchProportionalData(true);
         }
+        if (dataset5.classList.contains('active')) { 
+            await fetchAveragedData(true);
+        }
+
         updateChart(data);
     } catch (error) {
         console.error("Error fetching selected date data:", error);
     }
 }
+
 
 // Update chart
 function updateChart(data) {
@@ -326,4 +372,3 @@ function stickyTopBar() {
 
 // Initial fetch
 fetchData();
-
