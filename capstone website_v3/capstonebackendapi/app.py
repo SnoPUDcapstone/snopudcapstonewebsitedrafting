@@ -1,3 +1,12 @@
+#//To Do:  averaged model seems to be phase shifted by one day ---
+
+
+
+
+
+
+
+#//////////////////////////////////////////////////////////////////
 from re import S
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -455,6 +464,66 @@ def proportional_selected():
     else:
         return jsonify({"error": "Data not available yet"}), 500
 #///////////////////////////////////////////////////////////////////////////////////////////////
+#///////////////////////////////////////////////////////////////////////////////////////////
+#worth noting that a second copy of this should probably be made to pull from selection data
+#this functionality is not yet had, will remove this comment when it is.
+
+@app.route('/averaged', methods=['GET'])
+def Persistence_Averaged():
+    global time_data, solar_data
+    if solar_data is not None and time_data is not None:  # Check both solar_data and time_data
+        data = solar_data
+        prediction = np.zeros(1440)
+        for hour in range((int)(len(data)/60 - 23)):
+            refmin = data[(hour)*60+29:(hour)*60+30] #30th minute of the hour
+            refhour = data[(hour)*60:(hour+1)*60] #Same hour from yesterday
+            predictvalue = .4 * np.mean(refmin) + .6*np.mean(refhour)
+            if (hour == (int)(len(data)/60 - 24)):
+                remaining_length = len(data) - len(prediction)
+                prediction = np.append(prediction, np.ones(remaining_length)*predictvalue)
+            else:
+                prediction = np.append(prediction, np.ones(60)*predictvalue)
+
+        # Trim prediction to match the length of time_data[1440:]
+        prediction = prediction[1440:]
+
+        # Create a list of dictionaries with timestamp and prediction value
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data[1440:], prediction)]
+
+        return jsonify(result)  # Return as JSON
+
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/averagedselected', methods=['GET'])
+def Persistence_Averaged_selected():
+    global time_data_selected, solar_data_selected
+    if solar_data_selected is not None and time_data_selected is not None:  # Check both solar_data and time_data
+        data = solar_data_selected
+        prediction = np.zeros(1440)
+        for hour in range((int)(len(data)/60 - 23)):
+            refmin = data[(hour)*60+29:(hour)*60+30] #30th minute of the hour
+            refhour = data[(hour)*60:(hour+1)*60] #Same hour from yesterday
+            predictvalue = .4 * np.mean(refmin) + .6*np.mean(refhour)
+            if (hour == (int)(len(data)/60 - 24)):
+                remaining_length = len(data) - len(prediction)
+                prediction = np.append(prediction, np.ones(remaining_length)*predictvalue)
+            else:
+                prediction = np.append(prediction, np.ones(60)*predictvalue)
+
+        # Trim prediction to match the length of time_data[1440:]
+        prediction = prediction[1440:]
+
+        # Create a list of dictionaries with timestamp and prediction value
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], prediction)]
+
+        return jsonify(result)  # Return as JSON
+
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+#///////////////////////////////////////////////////////////////////////////////////////////
 
 @app.route('/')
 def hello():
