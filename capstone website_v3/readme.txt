@@ -16,20 +16,17 @@ in a terminal to setup server
 finally, when you open index.html it should display a graph!
 
 More to come, will update!!
-[2/17/2025]
-
 ------------------------------------------------------------
-update - [2/22/2025]
+Change log - to implement still:
+battery analysis for each model -----------------| X
+switch between graphing SOC and solar output ----| X
+rmse and mae metrics for selected models --------| X
+Machine Learning model --------------------------| X
+70_60 model -------------------------------------| X
+toggle on and off raw solar output --------------| X
+further graphic design for landing page ---------| X
 
-frontend design draft, same backend applies
------------------------------------------------------------
-update - [2/25/2025]
+about page --------------------------------------| X
+results page ------------------------------------| X
+other static pages as needed --------------------| X
 
-frontend design changes, in order to see previous work reroute to resource.html, follow all previous instructions
-------------------------------------------------------------
-update - [2/28/2025]
-
-finishing up design work of landing page
-need to make buttons functional and include metrics when buttons are pressed
---date selection is functional
--Donovan
