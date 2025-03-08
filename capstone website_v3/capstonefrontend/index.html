@@ -24,47 +24,44 @@
         <h1>Solar Firming</h1>
 
         <!-- add date selection -->
-        <form id="solarForm">
-            <fieldset>
-                <legend>Enter a date range to get solar production and consumption data</legend>
-                <label for="start">Start Date</label>
-                <input type="date" name="start" placeholder="yyyy-MM-dd" required id="start">
-                <label for="end">End Date</label>
-                <input type="date" name="end" placeholder="yyyy-MM-dd" required id="end">
-                <input id="hours" name="hours" type="hidden" value="T00:00">
-                <button type="submit" id="solarSubmit">Get Solar Data</button>
-                <button type="button" id="currentDataButton">Get Current Data</button> <!-- New button -->
-            </fieldset>
-        </form>
+        <div class="dashboard">
+            <form id="solarForm">
+                <fieldset>
+                    <legend>Enter a date range to get solar production and consumption data</legend>
+                    <label for="start">Start Date</label>
+                    <input type="date" name="start" placeholder="yyyy-MM-dd" required id="start">
+                    <label for="end">End Date</label>
+                    <input type="date" name="end" placeholder="yyyy-MM-dd" required id="end">
+                    <input id="hours" name="hours" type="hidden" value="T00:00">
+                    <button type="submit" id="solarSubmit">Get Solar Data</button>
+                    <button type="button" id="currentDataButton">Get Current Data</button>
+                </fieldset>
+            </form>
 
+            <button id="toggleSolarButton">Hide Solar Data</button>
 
-        <!-- add selection for persistance or soc -->
-
-        <div id="optionBox">
-            <fieldset>
-                <div class="option-box selected" data-value="option1">
-                    Solar
-                </div>
-                <div class="option-box" data-value="option2">
-                    Battery SOC
-                </div>
-            </fieldset>
+            <div id="optionBox">
+                <fieldset>
+                    <div class="option-box selected" data-value="option1">Solar</div>
+                    <div class="option-box" data-value="option2">Battery SOC</div>
+                    <div class="option-box" data-value="option3">Battery KW</div>
+                </fieldset>
+            </div>
         </div>
-
 
         <div class="chart-container">
             <canvas id="dataChart"></canvas>
         </div>
 
-        <div id="dataset1" class="dataset-box">30 _ 30</div>
+        <div id="dataset1" class="dataset-box">30_30</div>
         <div id="dataset2" class="dataset-box">30_60</div>
-        <div id="dataset3" class="dataset-box">Trend</div>
+        <div id="dataset3" class="dataset-box">trend</div>
         <div id="dataset4" class="dataset-box">Proportional</div>
         <div id="dataset5" class="dataset-box">Averaged</div>
         <div id="dataset6" class="dataset-box">70_60</div>
 
         <!-- add analitics for currently selected datasets -->
-
+        <h1>Analytics</h1>
         <script src="script.js"></script>
     </div>
 </body>
