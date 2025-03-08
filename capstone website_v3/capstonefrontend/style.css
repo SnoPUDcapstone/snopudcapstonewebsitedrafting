@@ -1,6 +1,8 @@
 body {
     font-family: Arial, sans-serif;
     text-align: center;
+    margin: 0;
+    padding: 0;
 }
 
 table {
@@ -14,7 +16,6 @@ th, td {
     padding: 8px;
 }
 
-
 .chart-container {
     width: 80%;
     max-width: 1000px;
@@ -23,32 +24,15 @@ th, td {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-top: 220px; /* Add more space to push the chart lower down */
+    margin-top: 20px; /* Reduced from 220px since dashboard will be above */
 }
 
 canvas {
-    width: 80% !important;
+    width: 100% !important;
     max-width: 1000px;
-    margin-top: 20px;
 }
 
-/* Adjust the chart height so it doesn't get overlapped */
-#dataChart {
-    width: 100% !important; /* Responsive width, but fixed height */
-    height: 100% !important; /* Fixed height, ensures it doesn't extend */
-}
-
-/*stuff for top bar*/
-/* Right text styles */
-.right-text {
-    font-size: 20px;
-    margin-right: 2%;
-    display: flex;
-    gap: 2%;
-    justify-content: flex-end;
-    align-items: center;
-}
-
+/* Top bar styles */
 .top-bar {
     background-color: #4c0099;
     color: #fff;
@@ -64,38 +48,97 @@ canvas {
     box-sizing: border-box;
 }
 
+.right-text {
+    font-size: 20px;
+    margin-right: 2%;
+    display: flex;
+    gap: 2%;
+    justify-content: flex-end;
+    align-items: center;
+}
+
 .headerlink {
-    color: #FFFFFF; /* Change this to the color you want */
-    text-decoration: none; /* This removes the underline */
+    color: #FFFFFF;
+    text-decoration: none;
 }
 
 .content {
-    /* Adjust padding-top to make space for the fixed top bar */
-    padding-top: 70px; /* Adjust according to your top bar height */
-    /* Add other styles for your content */
+    padding-top: 70px; /* Space for fixed top bar */
 }
 
-.center {
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
+/* New dashboard container */
+.dashboard {
+    width: 80%;
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    position: relative;
+    z-index: 10;
 }
 
-.descriptions::after {
-    content: "";
-    display: table;
-    clear: both;
+/* Date selection styling within dashboard */
+#solarForm {
+    flex: 1;
+    padding: 10px;
+    margin: 0; /* Remove absolute positioning margins */
+    position: static; /* Remove absolute positioning */
+    background-color: transparent; /* Blend with dashboard */
+    border: none; /* Remove border as it's within dashboard */
+    box-shadow: none;
 }
 
-.ivah, .andrew, .theo, .donovan {
-    float: left;
-    width: 25%;
-    padding: 0 10px;
-    box-sizing: border-box;
+/* Option boxes styling within dashboard */
+#optionBox {
+    flex: 1;
+    padding: 10px;
+    margin: 0; /* Remove absolute positioning margins */
+    position: static; /* Remove absolute positioning */
+    background-color: transparent; /* Blend with dashboard */
+    border: none; /* Remove border as it's within dashboard */
+    box-shadow: none;
+    text-align: center;
 }
 
+/* Toggle button styling within dashboard */
+#toggleSolarButton {
+    flex: 1;
+    width: 100%; /* Full width of its flex container */
+    max-width: 150px;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    margin: 0; /* Remove auto margin */
+}
 
-/* Style the boxes (dataset toggle buttons) */
+    #toggleSolarButton:hover {
+        background-color: #0056b3;
+    }
+
+    #toggleSolarButton:active {
+        background-color: #003d80;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    #toggleSolarButton.hidden {
+        background-color: grey;
+    }
+
+/* Dataset box styles */
 .dataset-box {
     display: inline-block;
     padding: 10px 20px;
@@ -106,48 +149,17 @@ canvas {
     transition: all 0.3s ease;
 }
 
-    /* Active state (when dataset is selected) */
-.dataset-box.active {
-    background-color: rgba(0, 123, 255, 0.5);
-    color: white;
-    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
-}
+    .dataset-box.active {
+        background-color: rgba(0, 123, 255, 0.5);
+        color: white;
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+    }
 
-    /* Hover effect for the boxes */
-.dataset-box:hover {
-    background-color: grey;
-}
+    .dataset-box:hover {
+        background-color: grey;
+    }
 
-
-/* this is stuff for the date selection bar*/
-#solarForm {
-    width: 80%;
-    max-width: 300px;
-    position: absolute;
-    left: 25%; /* Moves it 25% from the left */
-    top: 19%; /* Adjust this value to move the form down */
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    background-color: #f9f9f9;
-    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
-}
-
-#optionBox {
-    width: 80%;
-    max-width: 200px;
-    position: absolute;
-    right: 25%;
-    top: 25%; /* Adjust as needed */
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    background-color: #f9f9f9;
-    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
-    text-align: left;
-    z-index: 10;
-}
-
+/* Option box styles */
 .option-box {
     display: block;
     padding: 10px;
@@ -160,15 +172,15 @@ canvas {
     transition: all 0.3s ease;
 }
 
-.option-box.selected {
-    background-color: rgba(0, 123, 255, 0.5);
-    color: white;
-    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
-}
+    .option-box.selected {
+        background-color: rgba(0, 123, 255, 0.5);
+        color: white;
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+    }
 
-.option-box:hover {
-    background-color: #ddd;
-}
+    .option-box:hover {
+        background-color: #ddd;
+    }
 
 fieldset {
     border: none;
@@ -196,6 +208,7 @@ button {
     margin-top: 3px;
     border: 1px solid #ccc;
     border-radius: 3px;
+    box-sizing: border-box;
 }
 
 button {
@@ -207,6 +220,26 @@ button {
     padding: 5px;
 }
 
-button:hover {
-    background-color: #0056b3;
+    button:hover {
+        background-color: #0056b3;
+    }
+
+/* Other existing styles */
+.center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.descriptions::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.ivah, .andrew, .theo, .donovan {
+    float: left;
+    width: 25%;
+    padding: 0 10px;
+    box-sizing: border-box;
 }
