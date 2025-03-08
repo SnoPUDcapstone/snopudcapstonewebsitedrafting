@@ -1,11 +1,4 @@
 #//To Do:  averaged model seems to be phase shifted by one day ---
-
-
-
-
-
-
-
 #//////////////////////////////////////////////////////////////////
 from re import S
 from flask import Flask, jsonify, request
@@ -269,18 +262,24 @@ def trend_model():
         data = solar_data[1440:]
         predictions = []
         for hour in range(len(data) // 60 - 1):  # Loop over the data
-            target_time = time_data[hour]
-            
-            start_idx = hour * 60 - 60
+            start_idx = hour * 60 - 31
             end_idx = hour * 60 - 30
-            current_idx = hour * 60
+            curr_hour = hour * 60
 
-            idx_24hr_before = current_idx - (24 * 60) + 1  # 24 hours before
-            idx_30min_before = current_idx - 30  # 30 minutes before
+            curr_hour = datetime.fromtimestamp(curr_hour)  # Convert to datetime
+            month = curr_hour.month
+            
+            # Set max_correction based on the month
+            if month in [6, 7, 8]:  # June, July, August
+                max_correction = 50
+                max_solar_limit = 450
+            else:
+                max_correction = 25
+                max_solar_limit = 500
 
             # Check if the indices are within the data range and compute the average
-            if idx_24hr_before < idx_30min_before:
-                total_avg = (data[idx_24hr_before] + data[idx_30min_before]) / 2
+            if start_idx < end_idx:
+                total_avg = (data[start_idx] + data[end_idx]) / 2
             else:
                 total_avg = 0
 
@@ -289,13 +288,11 @@ def trend_model():
             else:
                 past_window = []
             
-            if len(past_window) >= 2:
-                recent_slope = (past_window[-1] - past_window[0]) / len(past_window)
+            if len(past_window) >= 1:
+                recent_slope = (data[end_idx] - data[start_idx]) / (end_idx - start_idx)
             else:
                 recent_slope = 0  # No valid slope if there's insufficient data
 
-            max_solar_limit = 500
-            max_correction = 35
             correction = np.clip(recent_slope * 30, -max_correction, max_correction)
 
             # Calculate forecasted value
@@ -321,21 +318,25 @@ def trend_model_selected():
         data = solar_data_selected[1440:]  # Use only the last 24 hours (assuming 2880 total minutes)
         predictions = []
         for hour in range(len(data) // 60 - 1):  # Loop over the data
-            target_time = time_data_selected[hour]
+            # target_time = time_data_selected[hour]
             # Find the indices of the last 60 minutes of data (1 hour back)
-            start_idx = hour * 60 - 60 
+            start_idx = hour * 60 - 31 
             end_idx = hour * 60 - 30 
-            current_idx = hour * 60 
+            curr_hour = hour * 60
+
+            curr_hour = datetime.fromtimestamp(curr_hour)  # Convert to datetime
+            month = curr_hour.month
             
-            # Indices for the required snapshots
-            idx_24hr_before = current_idx - (24 * 60)  # 24 hours before
-            idx_30min_before = current_idx - 30  # 30 minutes before
-            
-            # Check if the indices are within the data range and compute the average
-            if idx_24hr_before < idx_30min_before:
-                total_avg = (data[idx_24hr_before] + data[idx_30min_before]) / 2
+            # Set max_correction based on the month
+            if month in [6, 7, 8]:  # June, July, August
+                max_correction = 50
+                max_solar_limit = 450
             else:
-                total_avg = 0
+                max_correction = 25
+                max_solar_limit = 500
+
+            if start_idx < end_idx:
+                total_avg = (data[start_idx] + data[end_idx]) / 2
 
             if start_idx >= 0 and end_idx >= 0:
                 past_window =data[start_idx:end_idx]
@@ -343,12 +344,10 @@ def trend_model_selected():
                 past_window = []
 
             if len(past_window) >= 2:
-                recent_slope = (past_window[-1] - past_window[0]) / len(past_window)
+                recent_slope = (data[end_idx] - data[start_idx]) / (end_idx - start_idx)
             else:
                 recent_slope = 0  # No valid slope if there's insufficient data
 
-            max_solar_limit = 500
-            max_correction = 35
             correction = np.clip(recent_slope * 30, -max_correction, max_correction)
 
             forecasted_value = np.clip(total_avg + correction, 0, max_solar_limit)
@@ -520,6 +519,70 @@ def Persistence_Averaged_selected():
                   for t, p in zip(time_data_selected[1440:], prediction)]
 
         return jsonify(result)  # Return as JSON
+
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+    
+#///////////////////////////////////////////////////////////////////////////////////////////
+@app.route('/70_60', methods = ['GET'])
+def Persistence_70_60():
+    global time_data, solar_data
+    if solar_data is not None and time_data is not None:
+        data = solar_data[1440:]  # Last 24 hours
+        time_subset = time_data[1440:]  # Corresponding timestamps
+
+        prediction = np.zeros(60)  # Initial 60 zeros for the first hour
+        
+        for hour in range(len(data) // 60):
+            ref_idx = hour * 60 - 71 # 70 minutes before the forecasting hour
+            
+            if ref_idx >= 0:  # Ensure valid indexing
+                predict_value = np.mean(data[ref_idx:ref_idx+1])  # Average of the single value at index ref_idx
+            else:
+                predict_value = 0  # Default to 0 if not enough data
+            
+            if hour == (len(data) // 60 - 1):  # Last partial hour
+                remaining_length = len(data) - len(prediction)
+                prediction = np.append(prediction, np.ones(remaining_length) * predict_value)
+            else:
+                prediction = np.append(prediction, np.ones(60) * predict_value)
+
+        prediction = prediction[:len(time_subset)]  # Ensure lengths match
+        result = [{"Date and Time": str(t), "Value (KW)": float(p)} 
+                  for t, p in zip(time_subset, prediction)]
+        return jsonify(result)
+
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+    
+@app.route('/70_60_selected', methods = ['GET'])
+def Persistence_70_60_selected():
+    global time_data_selected, solar_data_selected
+    if solar_data_selected is not None and time_data_selected is not None:
+        data = solar_data_selected[1440:]  # Last 24 hours
+        time_subset = time_data_selected[1440:]  # Corresponding timestamps
+
+        prediction = np.zeros(60)  # Initial 60 zeros for the first hour
+        
+        for hour in range(len(data) // 60):
+            ref_idx = hour * 60 - 71 # 70 minutes before the forecasting hour
+            
+            if ref_idx >= 0:  # Ensure valid indexing
+                predict_value = np.mean(data[ref_idx:ref_idx+1])  # Average of the single value at index ref_idx
+            else:
+                predict_value = 0  # Default to 0 if not enough data
+            
+            if hour == (len(data) // 60 - 1):  # Last partial hour
+                remaining_length = len(data) - len(prediction)
+                prediction = np.append(prediction, np.ones(remaining_length) * predict_value)
+            else:
+                prediction = np.append(prediction, np.ones(60) * predict_value)
+
+        prediction = prediction[:len(time_subset)]  # Ensure lengths match
+        result = [{"Date and Time": str(t), "Value (KW)": float(p)} 
+                  for t, p in zip(time_subset, prediction)]
+        return jsonify(result)
 
     else:
         return jsonify({"error": "Data not available yet"}), 500
