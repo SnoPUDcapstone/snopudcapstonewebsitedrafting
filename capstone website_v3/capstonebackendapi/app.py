@@ -767,15 +767,13 @@ def trend_model():
     
 @app.route('/trend_selected', methods=['GET'])
 def trend_model_selected():
-    global time_data_selected, solar_data_selected, trend_selected_dat
-    if solar_data_selected is not None and time_data_selected is not None:  # Check both solar_data and time_data
-        data = solar_data_selected[1440:]  # Use only the last 24 hours (assuming 2880 total minutes)
+    global time_data_selected, solar_data_selected
+    if solar_data is not None and time_data is not None:
+        data = solar_data_selected[1440:]
         predictions = []
-        for hour in range(len(data) // 60):  # Loop over the data
-            # target_time = time_data_selected[hour]
-            # Find the indices of the last 60 minutes of data (1 hour back)
-            start_idx = hour * 60 - 31 
-            end_idx = hour * 60 - 30 
+        for hour in range(len(data) // 60 - 1):  # Loop over the data
+            start_idx = hour * 60 - 31
+            end_idx = hour * 60 - 30
             curr_hour = hour * 60
 
             curr_hour = datetime.fromtimestamp(curr_hour)  # Convert to datetime
@@ -789,28 +787,31 @@ def trend_model_selected():
                 max_correction = 25
                 max_solar_limit = 500
 
+            # Check if the indices are within the data range and compute the average
             if start_idx < end_idx:
                 total_avg = (data[start_idx] + data[end_idx]) / 2
+            else:
+                total_avg = 0
 
             if start_idx >= 0 and end_idx >= 0:
-                past_window =data[start_idx:end_idx]
+                past_window = data[start_idx:end_idx]
             else:
                 past_window = []
-
-            if len(past_window) >= 2:
+            
+            if len(past_window) >= 1:
                 recent_slope = (data[end_idx] - data[start_idx]) / (end_idx - start_idx)
             else:
                 recent_slope = 0  # No valid slope if there's insufficient data
 
             correction = np.clip(recent_slope * 30, -max_correction, max_correction)
 
+            # Calculate forecasted value
             forecasted_value = np.clip(total_avg + correction, 0, max_solar_limit)
             predictions.extend([forecasted_value] * 60)
         
+        # Ensure predictions match the length of time_data
         predictions = predictions[:len(time_data_selected[1440:])]
-
-        trend_selected_dat = predictions
-
+        
         result = [{"Date and Time": str(t), "Value (KW)": float(p)} 
                   for t, p in zip(time_data_selected[1440:], predictions)]
         
