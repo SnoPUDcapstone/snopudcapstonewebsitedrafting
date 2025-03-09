@@ -18,15 +18,16 @@ finally, when you open index.html it should display a graph!
 More to come, will update!!
 ------------------------------------------------------------
 Change log - to implement still:
-battery analysis for each model -----------------| X
-switch between graphing SOC and solar output ----| X
+
 rmse and mae metrics for selected models --------| X
 Machine Learning model --------------------------| X
-70_60 model -------------------------------------| X
-toggle on and off raw solar output --------------| X
 further graphic design for landing page ---------| X
+
 
 about page --------------------------------------| X
 results page ------------------------------------| X
 other static pages as needed --------------------| X
 
+known bugs:
+  switching from soc or batter KW to solar while date selection is active does not return the date selection as solar, rather the current days solar
+  toggling on and off solar while a date selection is active returns current day data
