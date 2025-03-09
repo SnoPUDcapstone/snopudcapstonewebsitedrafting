@@ -1,3 +1,7 @@
+# TODO
+#fix proportional and averaged
+#make analitics
+
 from re import S
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -27,6 +31,7 @@ per_30_60 = None
 trend_dat = None
 proportional_dat = None
 avg_dat = None
+per_70_60 = None
 
 def load_and_filter_data():
     """Loads and filters data for a 48-hour period into solar_data/time_data, and the last 24 hours into cached_data."""
@@ -76,7 +81,7 @@ threading.Thread(target=load_and_filter_data, daemon=True).start()
 
 def initialize_data():
     """Initializes all prediction data once at startup."""
-    global solar_data, time_data, per_30_30, per_30_60, trend_dat, proportional_dat, avg_dat
+    global solar_data, time_data, per_30_30, per_30_60, trend_dat, proportional_dat, avg_dat, per_70_60
     
     # Wait until solar_data and time_data are populated by the background thread
     while solar_data is None or time_data is None:
@@ -183,6 +188,31 @@ def initialize_data():
 
     avg_dat = prediction
 
+    #initialise 70_60
+
+    data = solar_data[1440:]  # Last 24 hours
+    time_subset = time_data[1440:]  # Corresponding timestamps
+
+    prediction = np.zeros(60)  # Initial 60 zeros for the first hour
+        
+    for hour in range(len(data) // 60):
+        ref_idx = hour * 60 - 71 # 70 minutes before the forecasting hour
+            
+        if ref_idx >= 0:  # Ensure valid indexing
+            predict_value = np.mean(data[ref_idx:ref_idx+1])  # Average of the single value at index ref_idx
+        else:
+            predict_value = 0  # Default to 0 if not enough data
+            
+        if hour == (len(data) // 60 - 1):  # Last partial hour
+            remaining_length = len(data) - len(prediction)
+            prediction = np.append(prediction, np.ones(remaining_length) * predict_value)
+        else:
+            prediction = np.append(prediction, np.ones(60) * predict_value)
+
+    prediction = prediction[:len(time_subset)]  # Ensure lengths match
+    per_70_60 = prediction
+
+
     print("All data initialized successfully")
 
 print("Starting initialization...")
@@ -194,9 +224,18 @@ def get_solar():
     """Returns the cached data for the last 24 hours from one year ago."""
     return jsonify(cached_data)
 
+
+#date selection and intitialisation of relevant data sets
+per_30_30_selected = None
+per_30_60_selected = None
+trend_selected_dat = None
+proportional_selected_dat = None
+avg_selected_dat = None
+per_70_60_selected = None
+
 @app.route('/selecteddate', methods=['GET'])
 def get_selected_date_data():
-    global solar_data_selected, time_data_selected
+    global solar_data_selected, time_data_selected, per_30_30_selected, per_30_60_selected, trend_selected_dat, proportional_selected_dat, avg_selected_dat, per_70_60_selected
 
     start_date = request.args.get('start')
     end_date = request.args.get('end')
@@ -226,6 +265,154 @@ def get_selected_date_data():
         solar_data_selected = df_solar_select.to_numpy()
         df_time_select = df_filtered_extended['Date and Time']
         time_data_selected = df_time_select.to_numpy()
+
+        #///////////////////////////////////////////////////////////
+        #initialisation
+        data = solar_data_selected[1440:]
+        prediction = np.zeros(60)
+        for hour in range((int)(len(data)/60 - 1)):
+            refhalfhour = data[(hour)*60:(hour+1)*60-30]
+            predictvalue = np.mean(refhalfhour)
+            prediction = np.append(prediction, np.ones(60)*predictvalue)
+        
+        # Trim prediction to match the length of time_data
+        prediction = prediction[:len(time_data_selected[1440:])]
+        
+        per_30_30_selected = prediction
+
+        #////
+        data = solar_data_selected[1440:]  # Use only the last 24 hours (assuming 2880 total minutes)
+        prediction = np.zeros(60)  # Initial 60 zeros for the first hour
+        for hour in range((int)(len(data) / 60)):
+            refmin = data[(hour) * 60 + 29:(hour) * 60 + 30]  # 30th minute of the hour
+            predictvalue = np.mean(refmin)
+            if hour == (int)(len(data) / 60 - 1):  # Last partial hour
+                remaining_length = len(data) - len(prediction)
+                prediction = np.append(prediction, np.ones(remaining_length) * predictvalue)
+            else:
+                prediction = np.append(prediction, np.ones(60) * predictvalue)
+
+        # Trim prediction to match the length of time_data[1440:]
+        prediction = prediction[:len(time_data_selected[1440:])]
+        per_30_60_selected = prediction
+        #//////
+        data = solar_data_selected[1440:]  # Use only the last 24 hours (assuming 2880 total minutes)
+        predictions = []
+        for hour in range(len(data) // 60):  # Loop over the data
+            # target_time = time_data_selected[hour]
+            # Find the indices of the last 60 minutes of data (1 hour back)
+            start_idx = hour * 60 - 31 
+            end_idx = hour * 60 - 30 
+            curr_hour = hour * 60
+
+            curr_hour = datetime.fromtimestamp(curr_hour)  # Convert to datetime
+            month = curr_hour.month
+            
+            # Set max_correction based on the month
+            if month in [6, 7, 8]:  # June, July, August
+                max_correction = 50
+                max_solar_limit = 450
+            else:
+                max_correction = 25
+                max_solar_limit = 500
+
+            if start_idx < end_idx:
+                total_avg = (data[start_idx] + data[end_idx]) / 2
+
+            if start_idx >= 0 and end_idx >= 0:
+                past_window =data[start_idx:end_idx]
+            else:
+                past_window = []
+
+            if len(past_window) >= 2:
+                recent_slope = (data[end_idx] - data[start_idx]) / (end_idx - start_idx)
+            else:
+                recent_slope = 0  # No valid slope if there's insufficient data
+
+            correction = np.clip(recent_slope * 30, -max_correction, max_correction)
+
+            forecasted_value = np.clip(total_avg + correction, 0, max_solar_limit)
+            predictions.extend([forecasted_value] * 60)
+        
+        predictions = predictions[:len(time_data_selected[1440:])]
+
+        trend_selected_dat = predictions
+        #///////////
+
+        df_selected = pd.DataFrame({'Date & Time': time_data_selected, 'Solar [kW]': solar_data_selected})
+
+        # Ensure proper datetime format and sorting
+        df_selected['Date & Time'] = pd.to_datetime(df_selected['Date & Time'])
+        df_selected = df_selected.sort_values(by='Date & Time').reset_index(drop=True)
+
+        # Compute ratio
+        ratio = df_selected['Solar [kW]'].shift(31) / df_selected['Solar [kW]'].shift(1471)
+
+        # Apply proportional forecasting algorithm
+        df_selected['proportional_1d_30m'] = np.where(
+            (ratio < 0.7) | (ratio > 1.3),  # Condition: ratio < 30% or > 130%
+            (df_selected['Solar [kW]'].shift(31) * 0.6 + df_selected['Solar [kW]'].shift(1411) * 0.4),  # If true
+            ratio * df_selected['Solar [kW]'].shift(1411)  # If false
+        )
+
+        # Maintain persistence for 60-minute blocks
+        for i in range(len(df_selected)):
+            if i % 60 == 0:  # Update persistence value at the start of each hour
+                persistence_value = df_selected.loc[i, 'proportional_1d_30m']
+            df_selected.loc[i, 'proportional_1d_30m'] = persistence_value
+
+        # Fill NaN values with 0
+        df_selected['proportional_1d_30m'].fillna(0, inplace=True)
+
+        # Extract only the last 1440 minutes (24 hours)
+        df_filtered = df_selected.iloc[1440:]
+
+        #change to numpy for output
+        timeproportionalselected = df_filtered['Date & Time'].to_numpy()
+        solarproportionalselected = df_filtered['proportional_1d_30m'].to_numpy()
+
+        proportional_selected_dat = solarproportionalselected
+
+        #////
+        data = solar_data_selected
+        prediction = np.zeros(1440)
+        for hour in range((int)(len(data)/60 - 23)):
+            refmin = data[(hour)*60+29:(hour)*60+30] #30th minute of the hour
+            refhour = data[(hour)*60:(hour+1)*60] #Same hour from yesterday
+            predictvalue = .4 * np.mean(refmin) + .6*np.mean(refhour)
+            if (hour == (int)(len(data)/60 - 24)):
+                remaining_length = len(data) - len(prediction)
+                prediction = np.append(prediction, np.ones(remaining_length)*predictvalue)
+            else:
+                prediction = np.append(prediction, np.ones(60)*predictvalue)
+
+        # Trim prediction to match the length of time_data[1440:]
+        prediction = prediction[1440:]
+        avg_selected_dat = prediction
+        #/////
+        data = solar_data_selected[1440:]  # Last 24 hours
+        time_subset = time_data_selected[1440:]  # Corresponding timestamps
+
+        prediction = np.zeros(60)  # Initial 60 zeros for the first hour
+        
+        for hour in range(len(data) // 60):
+            ref_idx = hour * 60 - 71 # 70 minutes before the forecasting hour
+            
+            if ref_idx >= 0:  # Ensure valid indexing
+                predict_value = np.mean(data[ref_idx:ref_idx+1])  # Average of the single value at index ref_idx
+            else:
+                predict_value = 0  # Default to 0 if not enough data
+            
+            if hour == (len(data) // 60 - 1):  # Last partial hour
+                remaining_length = len(data) - len(prediction)
+                prediction = np.append(prediction, np.ones(remaining_length) * predict_value)
+            else:
+                prediction = np.append(prediction, np.ones(60) * predict_value)
+
+        prediction = prediction[:len(time_subset)]  # Ensure lengths match
+        per_70_60_selected = prediction
+
+        #/////////////////////////////////////////////////////////
 
         # Filter for the original 24-hour window (for API response)
         df_filtered_api = df[(df['Date and Time'] >= start_datetime) & (df['Date and Time'] < end_datetime)]
@@ -292,7 +479,7 @@ def Persistence_30_30():
 
 @app.route('/30_30selected', methods=['GET'])
 def Persistence_30_30_selected():
-    global time_data_selected, solar_data_selected
+    global time_data_selected, solar_data_selected, per_30_30_selected
     if solar_data_selected is not None and time_data_selected is not None:
         data = solar_data_selected[1440:]
         prediction = np.zeros(60)
@@ -304,6 +491,7 @@ def Persistence_30_30_selected():
         # Trim prediction to match the length of time_data
         prediction = prediction[:len(time_data_selected[1440:])]
         
+        per_30_30_selected = prediction
         # Create a list of dictionaries with timestamp and prediction value
         result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
                   for t, p in zip(time_data_selected[1440:], prediction)]
@@ -327,7 +515,64 @@ def batt_use_30_30():
         return jsonify({"error": "Data not available yet"}), 500
 
 
+@app.route('/30_30selected/batt', methods=['GET'])
+def batt_use_30_30_selected():
+    global time_data_selected, solar_data_selected, per_30_30_selected
+    if solar_data_selected is not None and time_data_selected is not None and per_30_30_selected is not None:
 
+        prediction = solar_data_selected[1440:] - per_30_30_selected
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], prediction)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/30_30/soc', methods=['GET'])
+def soc_30_30():
+    global time_data, solar_data, per_30_30
+    if solar_data is not None and time_data is not None and per_30_30 is not None:
+
+        soc = np.zeros(1440)
+        soc[0] = 700
+        batteryout = solar_data[1440:] - per_30_30
+
+        for i in range(len(soc)):
+            if i == 0:
+                continue
+            if (soc[i-1] + (batteryout[i]/60)) <= 1400: 
+                soc[i] = soc[i-1] + (batteryout[i]/60)
+            else: soc[i] = soc[i-1]
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data[1440:], soc)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/30_30selected/soc', methods=['GET'])
+def soc_30_30_selected():
+    global time_data_selected, solar_data_selected, per_30_30_selected
+    if solar_data_selected is not None and time_data_selected is not None and per_30_30_selected is not None:
+
+        soc = np.zeros(len(solar_data_selected) - 1440)
+        soc[0] = 700
+        batteryout = solar_data_selected[1440:] - per_30_30_selected
+
+        for i in range(len(soc)):
+            if i == 0:
+                continue
+            if (soc[i-1] + (batteryout[i]/60)) <= 1400: 
+                soc[i] = soc[i-1] + (batteryout[i]/60)
+            else: soc[i] = soc[i-1]
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], soc)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
 #///////////////////////////////////////////////////////////////////////////////////////////
 #///////////////////////////////////////////////////////////////////////////////////////////
 #worth noting that a second copy of this should probably be made to pull from selection data
@@ -362,7 +607,7 @@ def Persistence_30_60():
 
 @app.route('/30_60selected', methods=['GET'])
 def Persistence_30_60_selected():
-    global time_data_selected, solar_data_selected
+    global time_data_selected, solar_data_selected, per_30_60_selected
     if solar_data_selected is not None and time_data_selected is not None:  # Check both solar_data and time_data
         data = solar_data_selected[1440:]  # Use only the last 24 hours (assuming 2880 total minutes)
         prediction = np.zeros(60)  # Initial 60 zeros for the first hour
@@ -377,6 +622,7 @@ def Persistence_30_60_selected():
 
         # Trim prediction to match the length of time_data[1440:]
         prediction = prediction[:len(time_data_selected[1440:])]
+        per_30_60_selected = prediction
 
         # Create a list of dictionaries with timestamp and prediction value
         result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
@@ -400,10 +646,69 @@ def batt_use_30_60():
     else:
         return jsonify({"error": "Data not available yet"}), 500
 
+@app.route('/30_60selected/batt', methods=['GET'])
+def batt_use_30_60_selected():
+    global time_data_selected, solar_data_selected, per_30_60_selected
+    if solar_data_selected is not None and time_data_selected is not None and per_30_60_selected is not None:
+
+        prediction = solar_data_selected[1440:] - per_30_60_selected
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], prediction)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/30_60/soc', methods=['GET'])
+def soc_30_60():
+    global time_data, solar_data, per_30_60
+    if solar_data is not None and time_data is not None and per_30_60 is not None:
+
+        soc = np.zeros(1440)
+        soc[0] = 700
+        batteryout = solar_data[1440:] - per_30_60
+
+        for i in range(len(soc)):
+            if i == 0:
+                continue
+            if (soc[i-1] + (batteryout[i]/60)) <= 1400: 
+                soc[i] = soc[i-1] + (batteryout[i]/60)
+            else: soc[i] = soc[i-1]
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data[1440:], soc)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/30_60selected/soc', methods=['GET'])
+def soc_30_60_selected():
+    global time_data_selected, solar_data_selected, per_30_60_selected
+    if solar_data_selected is not None and time_data_selected is not None and per_30_60_selected is not None:
+
+        soc = np.zeros(len(solar_data_selected) - 1440)
+        soc[0] = 700
+        batteryout = solar_data_selected[1440:] - per_30_60_selected
+
+        for i in range(len(soc)):
+            if i == 0:
+                continue
+            if (soc[i-1] + (batteryout[i]/60)) <= 1400: 
+                soc[i] = soc[i-1] + (batteryout[i]/60)
+            else: soc[i] = soc[i-1]
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], soc)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
 #///////////////////////////////////////////////////////////////////////////////////////////
 
 
 #///////////////////////////////////////////////////////////////////////////////////////////
+
 @app.route('/trend_model', methods=['GET'])
 def trend_model():
     global time_data, solar_data, trend_dat
@@ -459,12 +764,10 @@ def trend_model():
         return jsonify(result)
     else:
         return jsonify({"error": "Data not available yet"}), 500
-
-
     
 @app.route('/trend_selected', methods=['GET'])
 def trend_model_selected():
-    global time_data_selected, solar_data_selected
+    global time_data_selected, solar_data_selected, trend_selected_dat
     if solar_data_selected is not None and time_data_selected is not None:  # Check both solar_data and time_data
         data = solar_data_selected[1440:]  # Use only the last 24 hours (assuming 2880 total minutes)
         predictions = []
@@ -505,6 +808,9 @@ def trend_model_selected():
             predictions.extend([forecasted_value] * 60)
         
         predictions = predictions[:len(time_data_selected[1440:])]
+
+        trend_selected_dat = predictions
+
         result = [{"Date and Time": str(t), "Value (KW)": float(p)} 
                   for t, p in zip(time_data_selected[1440:], predictions)]
         
@@ -520,6 +826,65 @@ def batt_use_trend():
         prediction = solar_data[1440:] - trend_dat
         result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
                   for t, p in zip(time_data[1440:], prediction)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/trend_selected/batt', methods=['GET'])
+def batt_use_trend_selected():
+    global time_data_selected, solar_data_selected, trend_selected_dat
+    if solar_data_selected is not None and time_data_selected is not None and trend_selected_dat is not None:
+
+        prediction = solar_data_selected[1440:] - trend_selected_dat
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], prediction)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/trend_model/soc', methods=['GET'])
+def soc_trend():
+    global time_data, solar_data, trend_dat
+    if solar_data is not None and time_data is not None and trend_dat is not None:
+
+        soc = np.zeros(1440)
+        soc[0] = 700
+        batteryout = solar_data[1440:] - trend_dat
+
+        for i in range(len(soc)):
+            if i == 0:
+                continue
+            if (soc[i-1] + (batteryout[i]/60)) <= 1400: 
+                soc[i] = soc[i-1] + (batteryout[i]/60)
+            else: soc[i] = soc[i-1]
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data[1440:], soc)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/trend_selected/soc', methods=['GET'])
+def soc_trend_selected():
+    global time_data_selected, solar_data_selected, trend_selected_dat
+    if solar_data_selected is not None and time_data_selected is not None and trend_selected_dat is not None:
+
+        soc = np.zeros(len(solar_data_selected) - 1440)
+        soc[0] = 700
+        batteryout = solar_data_selected[1440:] - trend_selected_dat
+
+        for i in range(len(soc)):
+            if i == 0:
+                continue
+            if (soc[i-1] + (batteryout[i]/60)) <= 1400: 
+                soc[i] = soc[i-1] + (batteryout[i]/60)
+            else: soc[i] = soc[i-1]
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], soc)]
         
         return jsonify(result)
     else:
@@ -580,7 +945,7 @@ def Proportional():
 
 @app.route('/proportional_selected', methods=['GET'])
 def proportional_selected():
-    global time_data_selected, solar_data_selected
+    global time_data_selected, solar_data_selected, proportional_selected_dat
 
     if solar_data_selected is not None and time_data_selected is not None:
         # Convert to DataFrame
@@ -616,6 +981,8 @@ def proportional_selected():
         timeproportionalselected = df_filtered['Date & Time'].to_numpy()
         solarproportionalselected = df_filtered['proportional_1d_30m'].to_numpy()
 
+        proportional_selected_dat = solarproportionalselected
+
         # Format results as JSON
         result = [
             {"Date and Time": t.astype(str), "Value (KW)": float(p)}
@@ -635,6 +1002,65 @@ def batt_use_proportional():
         prediction = solar_data[1440:] - proportional_dat
         result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
                   for t, p in zip(time_data[1440:], prediction)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/proportional_selected/batt', methods=['GET'])
+def batt_proportional_selected():
+    global time_data_selected, solar_data_selected, proportional_selected_dat
+    if solar_data_selected is not None and time_data_selected is not None and proportional_selected_dat is not None:
+
+        prediction = solar_data_selected[1440:] - proportional_selected_dat
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], prediction)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/proportional/soc', methods=['GET'])
+def soc_proportional():
+    global time_data, solar_data, proportional_dat
+    if solar_data is not None and time_data is not None and proportional_dat is not None:
+
+        soc = np.zeros(1440)
+        soc[0] = 700
+        batteryout = solar_data[1440:] - proportional_dat
+
+        for i in range(len(soc)):
+            if i == 0:
+                continue
+            if (soc[i-1] + (batteryout[i]/60)) <= 1400: 
+                soc[i] = soc[i-1] + (batteryout[i]/60)
+            else: soc[i] = soc[i-1]
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data[1440:], soc)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/proportional_selected/soc', methods=['GET'])
+def soc_proportional_selected():
+    global time_data_selected, solar_data_selected, proportional_selected_dat
+    if solar_data_selected is not None and time_data_selected is not None and proportional_selected_dat is not None:
+
+        soc = np.zeros(len(solar_data_selected) - 1440)
+        soc[0] = 700
+        batteryout = solar_data_selected[1440:] - proportional_selected_dat
+
+        for i in range(len(soc)):
+            if i == 0:
+                continue
+            if (soc[i-1] + (batteryout[i]/60)) <= 1400: 
+                soc[i] = soc[i-1] + (batteryout[i]/60)
+            else: soc[i] = soc[i-1]
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], soc)]
         
         return jsonify(result)
     else:
@@ -675,7 +1101,7 @@ def Persistence_Averaged():
 
 @app.route('/averagedselected', methods=['GET'])
 def Persistence_Averaged_selected():
-    global time_data_selected, solar_data_selected
+    global time_data_selected, solar_data_selected, avg_selected_dat
     if solar_data_selected is not None and time_data_selected is not None:  # Check both solar_data and time_data
         data = solar_data_selected
         prediction = np.zeros(1440)
@@ -691,7 +1117,7 @@ def Persistence_Averaged_selected():
 
         # Trim prediction to match the length of time_data[1440:]
         prediction = prediction[1440:]
-
+        avg_selected_dat = prediction
         # Create a list of dictionaries with timestamp and prediction value
         result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
                   for t, p in zip(time_data_selected[1440:], prediction)]
@@ -713,11 +1139,71 @@ def batt_use_averaged():
         return jsonify(result)
     else:
         return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/averagedselected/batt', methods=['GET'])
+def batt_averaged_selected():
+    global time_data_selected, solar_data_selected, avg_selected_dat
+    if solar_data_selected is not None and time_data_selected is not None and avg_selected_dat is not None:
+
+        prediction = solar_data_selected[1440:] - avg_selected_dat
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], prediction)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/averaged/soc', methods=['GET'])
+def soc_averaged():
+    global time_data, solar_data, avg_dat
+    if solar_data is not None and time_data is not None and avg_dat is not None:
+
+        soc = np.zeros(1440)
+        soc[0] = 700
+        batteryout = solar_data[1440:] - avg_dat
+
+        for i in range(len(soc)):
+            if i == 0:
+                continue
+            if (soc[i-1] + (batteryout[i]/60)) <= 1400: 
+                soc[i] = soc[i-1] + (batteryout[i]/60)
+            else: soc[i] = soc[i-1]
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data[1440:], soc)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/averagedselected/soc', methods=['GET'])
+def soc_averaged_selected():
+    global time_data_selected, solar_data_selected, avg_selected_dat
+    if solar_data_selected is not None and time_data_selected is not None and avg_selected_dat is not None:
+
+        soc = np.zeros(len(solar_data_selected) - 1440)
+        soc[0] = 700
+        batteryout = solar_data_selected[1440:] - avg_selected_dat
+
+        for i in range(len(soc)):
+            if i == 0:
+                continue
+            if (soc[i-1] + (batteryout[i]/60)) <= 1400: 
+                soc[i] = soc[i-1] + (batteryout[i]/60)
+            else: soc[i] = soc[i-1]
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], soc)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
 #///////////////////////////////////////////////////////////////////////////////////////////
 #///////////////////////////////////////////////////////////////////////////////////////////
+
 @app.route('/70_60', methods = ['GET'])
 def Persistence_70_60():
-    global time_data, solar_data
+    global time_data, solar_data, per_70_60
     if solar_data is not None and time_data is not None:
         data = solar_data[1440:]  # Last 24 hours
         time_subset = time_data[1440:]  # Corresponding timestamps
@@ -739,6 +1225,8 @@ def Persistence_70_60():
                 prediction = np.append(prediction, np.ones(60) * predict_value)
 
         prediction = prediction[:len(time_subset)]  # Ensure lengths match
+        per_70_60 = prediction
+
         result = [{"Date and Time": str(t), "Value (KW)": float(p)} 
                   for t, p in zip(time_subset, prediction)]
         return jsonify(result)
@@ -747,9 +1235,9 @@ def Persistence_70_60():
         return jsonify({"error": "Data not available yet"}), 500
 
     
-@app.route('/70_60_selected', methods = ['GET'])
+@app.route('/70_60selected', methods = ['GET'])
 def Persistence_70_60_selected():
-    global time_data_selected, solar_data_selected
+    global time_data_selected, solar_data_selected, per_70_60_selected
     if solar_data_selected is not None and time_data_selected is not None:
         data = solar_data_selected[1440:]  # Last 24 hours
         time_subset = time_data_selected[1440:]  # Corresponding timestamps
@@ -771,10 +1259,85 @@ def Persistence_70_60_selected():
                 prediction = np.append(prediction, np.ones(60) * predict_value)
 
         prediction = prediction[:len(time_subset)]  # Ensure lengths match
+        per_70_60_selected = prediction
+
         result = [{"Date and Time": str(t), "Value (KW)": float(p)} 
                   for t, p in zip(time_subset, prediction)]
         return jsonify(result)
 
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/70_60/batt', methods=['GET'])
+def batt_use_70_60():
+    global per_70_60, time_data, solar_data
+    if solar_data is not None and time_data is not None and per_70_60 is not None:
+
+        prediction = solar_data[1440:] - per_70_60
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data[1440:], prediction)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/70_60selected/batt', methods=['GET'])
+def batt_70_60_selected():
+    global time_data_selected, solar_data_selected, per_70_60_selected
+    if solar_data_selected is not None and time_data_selected is not None and per_70_60_selected is not None:
+
+        prediction = solar_data_selected[1440:] - per_70_60_selected
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], prediction)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/70_60/soc', methods=['GET'])
+def soc_70_60():
+    global time_data, solar_data, per_70_60
+    if solar_data is not None and time_data is not None and per_70_60 is not None:
+
+        soc = np.zeros(1440)
+        soc[0] = 700
+        batteryout = solar_data[1440:] - per_70_60
+
+        for i in range(len(soc)):
+            if i == 0:
+                continue
+            if (soc[i-1] + (batteryout[i]/60)) <= 1400: 
+                soc[i] = soc[i-1] + (batteryout[i]/60)
+            else: soc[i] = soc[i-1]
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data[1440:], soc)]
+        
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Data not available yet"}), 500
+
+@app.route('/70_60selected/soc', methods=['GET'])
+def soc_70_60_selected():
+    global time_data_selected, solar_data_selected, per_70_60_selected
+    if solar_data_selected is not None and time_data_selected is not None and per_70_60_selected is not None:
+
+        soc = np.zeros(len(solar_data_selected) - 1440)
+        soc[0] = 700
+        batteryout = solar_data_selected[1440:] - per_70_60_selected
+
+        for i in range(len(soc)):
+            if i == 0:
+                continue
+            if (soc[i-1] + (batteryout[i]/60)) <= 1400: 
+                soc[i] = soc[i-1] + (batteryout[i]/60)
+            else: soc[i] = soc[i-1]
+
+        result = [{"Date and Time": t.astype(str), "Value (KW)": float(p)} 
+                  for t, p in zip(time_data_selected[1440:], soc)]
+        
+        return jsonify(result)
     else:
         return jsonify({"error": "Data not available yet"}), 500
 #///////////////////////////////////////////////////////////////////////////////////////////
