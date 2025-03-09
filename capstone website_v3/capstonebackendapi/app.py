@@ -732,7 +732,7 @@ def trend_model():
                 max_solar_limit = 500
 
             # Check if the indices are within the data range and compute the average
-            if start_idx < end_idx:
+            if start_idx < end_idx: 
                 total_avg = (data[start_idx] + data[end_idx]) / 2
             else:
                 total_avg = 0
