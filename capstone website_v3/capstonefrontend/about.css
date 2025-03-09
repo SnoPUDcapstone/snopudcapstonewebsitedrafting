@@ -263,27 +263,19 @@ h2 {
 
 .team-members {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     gap: 20px;
 }
 
-@media (max-width: 1000px) {
-    .team-members {
-        flex-direction: column;
-    }
-    
-}
 
 .team-member {
     display: flex;
-    flex-direction: column;
     align-items: center;
     background-color: #f9f9f9;
     border-radius: 8px;
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
     padding: 10px;
     margin: 10px 0;
-    flex: 1;
 }
 
 .member-name {
