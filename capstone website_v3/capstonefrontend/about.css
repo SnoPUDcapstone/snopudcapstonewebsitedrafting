@@ -218,7 +218,7 @@ body {
 }
 
 header {
-    background-color: #3ea1f8;
+    background-color: #6f4fc7;
     color: white;
     padding: 20px;
     text-align: center;
@@ -241,23 +241,29 @@ h2 {
     font-size: 1.1em;
     color: #555555;
     line-height: 1.6em;
+    margin: 0 auto;
+    max-width: 1200px;
 }
 
 .about-team {
     background-color: #ffffff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     padding: 20px;
+
 }
 
 .team-photo {
     text-align: center;
     margin-bottom: 20px;
+
 }
 
 .team-photo img {
     width: 100%;
     max-width: 1200px;
     height: auto;
+    margin: 0 auto;
+    max-width: 1200px;
     
 }
 
@@ -270,23 +276,32 @@ h2 {
 
 .team-member {
     display: flex;
+    gap: 20px; /* Space between the image and the description */
     align-items: center;
     background-color: #f9f9f9;
     border-radius: 8px;
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
     padding: 10px;
-    margin: 10px 0;
+    margin: 0 auto;
+    max-width: 1200px;
 }
 
 .member-name {
-    width: 30%;
+
     text-align: left;
 }
 
 .member-name h3 {
-    text-align: center;
-    font-size: 1.5em;
+    text-align: auto;
+    font-size: 1.4em;
     color: #000000;
+}
+
+.member-photo img {
+    width: 200px;  /* Adjust the image width as needed */
+    height: auto;
+    display: block;
+    margin-bottom: 10px;  /* Add space between image and name */
 }
 
 .member-description {
