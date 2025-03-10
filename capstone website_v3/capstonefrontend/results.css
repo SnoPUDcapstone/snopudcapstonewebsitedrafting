@@ -1,0 +1,131 @@
+/* Existing body styles */
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+}
+
+/* Existing table styles */
+th, td {
+    border: 1px solid black;
+    padding: 8px;
+}
+
+/* Top bar styles */
+.top-bar {
+    background-color: #4c0099;
+    color: #fff;
+    padding: 10px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+.right-text {
+    font-size: 20px;
+    margin-right: 2%;
+    display: flex;
+    gap: 2%;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.headerlink {
+    color: #FFFFFF;
+    text-decoration: none;
+}
+
+/* Content container with space for fixed top bar */
+.content {
+    padding-top: 70px; /* Space for fixed top bar */
+    margin: 0 auto;
+    padding-bottom: 20px;
+}
+
+.maincontent {
+    padding-top: 70px; /* Space for fixed top bar */
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: 20px;
+}
+/* Subheader styles */
+.subheader {
+    background-color: #6f4fc7;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+h1 {
+    margin: 0;
+}
+
+/* Section styling */
+.prelim, .performance, .modeling, .best, .finance, .future, .resources {
+    margin-bottom: 40px;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    text-align: left; /* Override body text-align for content */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+    /* Hover effect for interactivity */
+    .prelim:hover, .performance:hover, .modeling:hover, .best:hover,
+    .finance:hover, .future:hover, .resources:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Section headings */
+    .prelim h2, .performance h2, .modeling h2, .best h2,
+    .finance h2, .future h2, .resources h2 {
+        font-size: 1.8em;
+        color: #4c0099; /* Matches top-bar color for consistency */
+        margin-bottom: 15px;
+        border-bottom: 2px solid #6f4fc7; /* Matches subheader color */
+        padding-bottom: 5px;
+        font-weight: 500;
+    }
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .content {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    h1 {
+        font-size: 2em;
+    }
+
+    .prelim h2, .performance h2, .modeling h2, .best h2,
+    .finance h2, .future h2, .resources h2 {
+        font-size: 1.5em;
+    }
+
+    .prelim, .performance, .modeling, .best, .finance, .future, .resources {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .right-text {
+        font-size: 16px;
+        gap: 5px;
+    }
+}
+
+/* Subtle background for contrast */
+html {
+    background-color: #f8f9fa; /* Light gray to complement purple theme */
+}
