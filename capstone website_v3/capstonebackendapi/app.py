@@ -732,7 +732,7 @@ def trend_model():
                 max_solar_limit = 500
 
             # Check if the indices are within the data range and compute the average
-            if start_idx < end_idx: 
+            if start_idx < end_idx:
                 total_avg = (data[start_idx] + data[end_idx]) / 2
             else:
                 total_avg = 0
@@ -767,13 +767,15 @@ def trend_model():
     
 @app.route('/trend_selected', methods=['GET'])
 def trend_model_selected():
-    global time_data_selected, solar_data_selected
-    if solar_data is not None and time_data is not None:
-        data = solar_data_selected[1440:]
+    global time_data_selected, solar_data_selected, trend_selected_dat
+    if solar_data_selected is not None and time_data_selected is not None:  # Check both solar_data and time_data
+        data = solar_data_selected[1440:]  # Use only the last 24 hours (assuming 2880 total minutes)
         predictions = []
-        for hour in range(len(data) // 60 - 1):  # Loop over the data
-            start_idx = hour * 60 - 31
-            end_idx = hour * 60 - 30
+        for hour in range(len(data) // 60):  # Loop over the data
+            # target_time = time_data_selected[hour]
+            # Find the indices of the last 60 minutes of data (1 hour back)
+            start_idx = hour * 60 - 31 
+            end_idx = hour * 60 - 30 
             curr_hour = hour * 60
 
             curr_hour = datetime.fromtimestamp(curr_hour)  # Convert to datetime
@@ -787,31 +789,28 @@ def trend_model_selected():
                 max_correction = 25
                 max_solar_limit = 500
 
-            # Check if the indices are within the data range and compute the average
             if start_idx < end_idx:
                 total_avg = (data[start_idx] + data[end_idx]) / 2
-            else:
-                total_avg = 0
 
             if start_idx >= 0 and end_idx >= 0:
-                past_window = data[start_idx:end_idx]
+                past_window =data[start_idx:end_idx]
             else:
                 past_window = []
-            
-            if len(past_window) >= 1:
+
+            if len(past_window) >= 2:
                 recent_slope = (data[end_idx] - data[start_idx]) / (end_idx - start_idx)
             else:
                 recent_slope = 0  # No valid slope if there's insufficient data
 
             correction = np.clip(recent_slope * 30, -max_correction, max_correction)
 
-            # Calculate forecasted value
             forecasted_value = np.clip(total_avg + correction, 0, max_solar_limit)
             predictions.extend([forecasted_value] * 60)
         
-        # Ensure predictions match the length of time_data
         predictions = predictions[:len(time_data_selected[1440:])]
-        
+
+        trend_selected_dat = predictions
+
         result = [{"Date and Time": str(t), "Value (KW)": float(p)} 
                   for t, p in zip(time_data_selected[1440:], predictions)]
         
@@ -1342,6 +1341,72 @@ def soc_70_60_selected():
     else:
         return jsonify({"error": "Data not available yet"}), 500
 #///////////////////////////////////////////////////////////////////////////////////////////
+
+#this is a test dataset for metrics, implement in future @app.route('/metrics')
+@app.route('/metrics')
+def get_metrics():
+    global solar_data, per_30_30, per_30_60, per_70_60, trend_dat, avg_dat, proportional_dat 
+    global solar_data_selected, per_30_30_selected, per_30_60_selected, per_70_60_selected, trend_selected_dat, proportional_selected_dat, avg_selected_dat
+
+    start = request.args.get('start')
+    end = request.args.get('end')
+    data_type = request.args.get('type', 'option1')
+
+    metrics = None
+
+    # Example static metrics (replace with your actual calculations)
+    if (start and end):
+        solarkwh = sum(solar_data_selected[1440:])/60
+        per3030kwh = sum(per_30_30_selected)/60
+        per3060kwh = sum(per_30_60_selected)/60
+        per7060kwh = sum(per_70_60_selected)/60
+        trendkwh = sum(trend_selected_dat)/60
+        proportionalkwh = sum(proportional_selected_dat)/60
+        averagedkwh = sum(avg_selected_dat)/60
+
+        per3030cycles = (np.abs(((solar_data_selected[1440:]-per_30_30_selected)/60)).sum())/1400
+        per3060cycles = (np.abs(((solar_data_selected[1440:]-per_30_60_selected)/60)).sum())/1400
+        per7060cycles = (np.abs(((solar_data_selected[1440:]-per_70_60_selected)/60)).sum())/1400
+        trendcycles = (np.abs(((solar_data_selected[1440:]-trend_selected_dat)/60)).sum())/1400
+        proportionalcycles = (np.abs(((solar_data_selected[1440:]-proportional_selected_dat)/60)).sum())/1400
+        averagedcycles = (np.abs(((solar_data_selected[1440:]-avg_selected_dat)/60)).sum())/1400
+
+        metrics = {
+            'solar': round(solarkwh, 2),
+            'dataset1': {'rmse': 1.2, 'mae': 0.8, 'mse': 1.44, 'cycles': round(per3030cycles, 2), 'energy': round(per3030kwh, 2)},
+            'dataset2': {'rmse': 1.5, 'mae': 0.9, 'mse': 2.25, 'cycles': round(per3060cycles, 2), 'energy': round(per3060kwh, 2)},
+            'dataset3': {'rmse': 1.1, 'mae': 0.7, 'mse': 1.21, 'cycles': round(per7060cycles, 2), 'energy': round(per7060kwh, 2)},
+            'dataset4': {'rmse': 1.3, 'mae': 0.85, 'mse': 1.69, 'cycles': round(trendcycles, 2), 'energy': round(trendkwh, 2)},
+            'dataset5': {'rmse': 1.4, 'mae': 0.95, 'mse': 1.96, 'cycles': round(proportionalcycles, 2), 'energy': round(proportionalkwh, 2)},
+            'dataset6': {'rmse': 1.0, 'mae': 0.6, 'mse': 1.0, 'cycles': round(averagedcycles, 2), 'energy': round(averagedkwh, 2)}
+        }
+    else:
+
+        solarkwh = sum(solar_data[1440:])/60
+        per3030kwh = sum(per_30_30)/60
+        per3060kwh = sum(per_30_60)/60
+        per7060kwh = sum(per_70_60)/60
+        trendkwh = sum(trend_dat)/60
+        proportionalkwh = sum(proportional_dat)/60
+        averagedkwh = sum(avg_dat)/60
+
+        per3030cycles = (np.abs(((solar_data[1440:]-per_30_30)/60)).sum())/1400
+        per3060cycles = (np.abs(((solar_data[1440:]-per_30_60)/60)).sum())/1400
+        per7060cycles = (np.abs(((solar_data[1440:]-per_70_60)/60)).sum())/1400
+        trendcycles = (np.abs(((solar_data[1440:]-trend_dat)/60)).sum())/1400
+        proportionalcycles = (np.abs(((solar_data[1440:]-proportional_dat)/60)).sum())/1400
+        averagedcycles = (np.abs(((solar_data[1440:]-avg_dat)/60)).sum())/1400
+
+        metrics = {
+            'solar': round(solarkwh, 2),
+            'dataset1': {'rmse': 1.2, 'mae': 0.8, 'mse': 1.44, 'cycles': round(per3030cycles, 2), 'energy': round(per3030kwh, 2)},
+            'dataset2': {'rmse': 1.5, 'mae': 0.9, 'mse': 2.25, 'cycles': round(per3060cycles, 2), 'energy': round(per3060kwh, 2)},
+            'dataset3': {'rmse': 1.1, 'mae': 0.7, 'mse': 1.21, 'cycles': round(per7060cycles, 2), 'energy': round(per7060kwh, 2)},
+            'dataset4': {'rmse': 1.3, 'mae': 0.85, 'mse': 1.69, 'cycles': round(trendcycles, 2), 'energy': round(trendkwh, 2)},
+            'dataset5': {'rmse': 1.4, 'mae': 0.95, 'mse': 1.96, 'cycles': round(proportionalcycles, 2), 'energy': round(proportionalkwh, 2)},
+            'dataset6': {'rmse': 1.0, 'mae': 0.6, 'mse': 1.0, 'cycles': round(averagedcycles, 2), 'energy': round(averagedkwh, 2)}
+        }
+    return jsonify(metrics)
 
 
 @app.route('/')
