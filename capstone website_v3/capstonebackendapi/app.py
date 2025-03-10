@@ -43,8 +43,8 @@ def load_and_filter_data():
         try:
             now = datetime.now()
             one_year_ago = now - timedelta(days=365)
-            start_time_48h = one_year_ago - timedelta(hours=48)  # Start of the 48-hour window
-            start_time_24h = one_year_ago - timedelta(hours=24)  # Start of the 24-hour window
+            start_time_48h = one_year_ago - timedelta(hours=49)  # Start of the 48-hour window
+            start_time_24h = one_year_ago - timedelta(hours=25)  # Start of the 24-hour window
             end_time = one_year_ago                             # End of both windows (one year ago)
 
             # Read in data and condition timestamps
