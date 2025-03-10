@@ -57,6 +57,9 @@ const API_URL_averaged_selected_batt = "http://localhost:5555/averagedselected/b
 const API_URL_70_60_batt = "http://localhost:5555/70_60/batt";
 const API_URL_70_60_selected_batt = "http://localhost:5555/70_60selected/batt";
 
+// Metrics API
+const API_URL_METRICS = "http://localhost:5555/metrics";
+
 // Function to get appropriate endpoints based on data type
 function getEndpoints(dataType) {
     switch (dataType) {
@@ -213,15 +216,10 @@ function addDatasetToChart(data, label, color, dataType) {
     const values = data.map(row => row["Value (KW)"]);
 
     if (window.myChart) {
-        // Update labels if longer dataset is provided
         if (!window.myChart.data.labels || dates.length > window.myChart.data.labels.length) {
             window.myChart.data.labels = dates;
         }
-
-        // Remove existing dataset with the same label
         window.myChart.data.datasets = window.myChart.data.datasets.filter(ds => ds.label !== label);
-
-        // Add new dataset
         window.myChart.data.datasets.push({
             label: label,
             data: values,
@@ -233,7 +231,6 @@ function addDatasetToChart(data, label, color, dataType) {
         });
         window.myChart.update();
     } else {
-        // If no chart exists, create it with this dataset
         updateChart(data, dataType, label, color);
     }
 }
@@ -246,6 +243,65 @@ function removeDatasetFromChart(labels) {
         }
         window.myChart.update();
     }
+}
+
+// New function to fetch metrics
+async function fetchMetrics(dataType, startDate = null, endDate = null) {
+    try {
+        let url = API_URL_METRICS;
+        if (startDate && endDate) {
+            url += `?start=${startDate}&end=${endDate}`;
+        }
+        url += `${url.includes('?') ? '&' : '?'}type=${dataType}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const metrics = await response.json();
+        updateMetrics(metrics);
+    } catch (error) {
+        console.error("Error fetching metrics:", error);
+        updateMetrics({}); // Reset to zeros on error
+    }
+}
+
+// New function to update metrics display
+function updateMetrics(metrics) {
+    document.getElementById('solar-value').textContent = metrics.solar || 0;
+
+    document.getElementById('dataset1-rmse').textContent = metrics.dataset1?.rmse || 0;
+    document.getElementById('dataset1-mae').textContent = metrics.dataset1?.mae || 0;
+    document.getElementById('dataset1-mse').textContent = metrics.dataset1?.mse || 0;
+    document.getElementById('dataset1-cycles').textContent = metrics.dataset1?.cycles || 0;
+    document.getElementById('dataset1-energy').textContent = metrics.dataset1?.energy || 0;
+
+    document.getElementById('dataset2-rmse').textContent = metrics.dataset2?.rmse || 0;
+    document.getElementById('dataset2-mae').textContent = metrics.dataset2?.mae || 0;
+    document.getElementById('dataset2-mse').textContent = metrics.dataset2?.mse || 0;
+    document.getElementById('dataset2-cycles').textContent = metrics.dataset2?.cycles || 0;
+    document.getElementById('dataset2-energy').textContent = metrics.dataset2?.energy || 0;
+
+    document.getElementById('dataset3-rmse').textContent = metrics.dataset3?.rmse || 0;
+    document.getElementById('dataset3-mae').textContent = metrics.dataset3?.mae || 0;
+    document.getElementById('dataset3-mse').textContent = metrics.dataset3?.mse || 0;
+    document.getElementById('dataset3-cycles').textContent = metrics.dataset3?.cycles || 0;
+    document.getElementById('dataset3-energy').textContent = metrics.dataset3?.energy || 0;
+
+    document.getElementById('dataset4-rmse').textContent = metrics.dataset4?.rmse || 0;
+    document.getElementById('dataset4-mae').textContent = metrics.dataset4?.mae || 0;
+    document.getElementById('dataset4-mse').textContent = metrics.dataset4?.mse || 0;
+    document.getElementById('dataset4-cycles').textContent = metrics.dataset4?.cycles || 0;
+    document.getElementById('dataset4-energy').textContent = metrics.dataset4?.energy || 0;
+
+    document.getElementById('dataset5-rmse').textContent = metrics.dataset5?.rmse || 0;
+    document.getElementById('dataset5-mae').textContent = metrics.dataset5?.mae || 0;
+    document.getElementById('dataset5-mse').textContent = metrics.dataset5?.mse || 0;
+    document.getElementById('dataset5-cycles').textContent = metrics.dataset5?.cycles || 0;
+    document.getElementById('dataset5-energy').textContent = metrics.dataset5?.energy || 0;
+
+    document.getElementById('dataset6-rmse').textContent = metrics.dataset6?.rmse || 0;
+    document.getElementById('dataset6-mae').textContent = metrics.dataset6?.mae || 0;
+    document.getElementById('dataset6-mse').textContent = metrics.dataset6?.mse || 0;
+    document.getElementById('dataset6-cycles').textContent = metrics.dataset6?.cycles || 0;
+    document.getElementById('dataset6-energy').textContent = metrics.dataset6?.energy || 0;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -264,26 +320,29 @@ document.addEventListener('DOMContentLoaded', () => {
             box.classList.add('selected');
             currentDataType = box.getAttribute('data-value');
 
-            // Update y-axis label without resetting chart
             if (window.myChart) {
                 const label = currentDataType === 'option2' ? "State of Charge (%)" :
                     currentDataType === 'option3' ? "Battery Power (KW)" :
                         "Solar Power (KW)";
                 window.myChart.options.scales.y.title.text = label;
 
-                // Remove base solar data if switching away from option1
                 if (currentDataType !== 'option1') {
                     removeDatasetFromChart(["Solar Power (KW)"]);
                 } else {
-                    // Re-fetch base solar data if switching back to option1
-                    const response = await fetch(API_URL);
+                    const startDate = document.getElementById('start').value;
+                    const endDate = document.getElementById('end').value;
+                    const useSelected = startDate && endDate;
+                    let url = API_URL;
+                    if (useSelected) {
+                        url = `${API_URL2}?start=${startDate}&end=${endDate}`;
+                    }
+                    const response = await fetch(url);
                     if (response.ok) {
                         const data = await response.json();
                         addDatasetToChart(data, "Solar Power (KW)", "blue", currentDataType);
                     }
                 }
 
-                // Re-fetch active datasets for the new data type
                 const startDate = document.getElementById('start').value;
                 const endDate = document.getElementById('end').value;
                 const useSelected = startDate && endDate;
@@ -296,105 +355,113 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dataset6.classList.contains('active')) await fetch70_60Data(useSelected, currentDataType);
 
                 window.myChart.update();
+                await fetchMetrics(currentDataType, startDate, endDate); // Fetch metrics after updating chart
             } else {
-                // Initial chart setup if it doesn’t exist
                 await fetchData(currentDataType);
+                await fetchMetrics(currentDataType);
             }
         });
     });
 
     const dataset1 = document.getElementById('dataset1');
-    dataset1.addEventListener('click', () => {
+    dataset1.addEventListener('click', async () => {
         dataset1.classList.toggle('active');
         const startDate = document.getElementById('start').value;
         const endDate = document.getElementById('end').value;
         const useSelected = dataset1.classList.contains('active') && startDate && endDate;
 
         if (dataset1.classList.contains('active')) {
-            fetch30_30Data(useSelected, currentDataType);
+            await fetch30_30Data(useSelected, currentDataType);
         } else {
             removeDatasetFromChart(["30_30 Data", "30_30 Selected Data"]);
         }
+        await fetchMetrics(currentDataType, startDate, endDate);
     });
 
     const dataset2 = document.getElementById('dataset2');
-    dataset2.addEventListener('click', () => {
+    dataset2.addEventListener('click', async () => {
         dataset2.classList.toggle('active');
         const startDate = document.getElementById('start').value;
         const endDate = document.getElementById('end').value;
         const useSelected = dataset2.classList.contains('active') && startDate && endDate;
 
         if (dataset2.classList.contains('active')) {
-            fetch30_60Data(useSelected, currentDataType);
+            await fetch30_60Data(useSelected, currentDataType);
         } else {
             removeDatasetFromChart(["30_60 Data", "30_60 Selected Data"]);
         }
+        await fetchMetrics(currentDataType, startDate, endDate);
     });
 
     const dataset3 = document.getElementById('dataset3');
-    dataset3.addEventListener('click', () => {
+    dataset3.addEventListener('click', async () => {
         dataset3.classList.toggle('active');
         const startDate = document.getElementById('start').value;
         const endDate = document.getElementById('end').value;
         const useSelected = dataset3.classList.contains('active') && startDate && endDate;
 
         if (dataset3.classList.contains('active')) {
-            fetchTrendData(useSelected, currentDataType);
+            await fetchTrendData(useSelected, currentDataType);
         } else {
             removeDatasetFromChart(["Trend Data", "Trend Selected Data"]);
         }
+        await fetchMetrics(currentDataType, startDate, endDate);
     });
 
     const dataset4 = document.getElementById('dataset4');
-    dataset4.addEventListener('click', () => {
+    dataset4.addEventListener('click', async () => {
         dataset4.classList.toggle('active');
         const startDate = document.getElementById('start').value;
         const endDate = document.getElementById('end').value;
         const useSelected = dataset4.classList.contains('active') && startDate && endDate;
 
         if (dataset4.classList.contains('active')) {
-            fetchProportionalData(useSelected, currentDataType);
+            await fetchProportionalData(useSelected, currentDataType);
         } else {
             removeDatasetFromChart(["Proportional Data", "Proportional Selected Data"]);
         }
+        await fetchMetrics(currentDataType, startDate, endDate);
     });
 
     const dataset5 = document.getElementById('dataset5');
-    dataset5.addEventListener('click', () => {
+    dataset5.addEventListener('click', async () => {
         dataset5.classList.toggle('active');
         const startDate = document.getElementById('start').value;
         const endDate = document.getElementById('end').value;
         const useSelected = dataset5.classList.contains('active') && startDate && endDate;
 
         if (dataset5.classList.contains('active')) {
-            fetchAveragedData(useSelected, currentDataType);
+            await fetchAveragedData(useSelected, currentDataType);
         } else {
             removeDatasetFromChart(["Averaged Data", "Averaged Selected Data"]);
         }
+        await fetchMetrics(currentDataType, startDate, endDate);
     });
 
     const dataset6 = document.getElementById('dataset6');
-    dataset6.addEventListener('click', () => {
+    dataset6.addEventListener('click', async () => {
         dataset6.classList.toggle('active');
         const startDate = document.getElementById('start').value;
         const endDate = document.getElementById('end').value;
         const useSelected = dataset6.classList.contains('active') && startDate && endDate;
 
         if (dataset6.classList.contains('active')) {
-            fetch70_60Data(useSelected, currentDataType);
+            await fetch70_60Data(useSelected, currentDataType);
         } else {
             removeDatasetFromChart(["70_60 Data", "70_60 Selected Data"]);
         }
+        await fetchMetrics(currentDataType, startDate, endDate);
     });
 
-    fetchData('option1'); // Initial load
+    // Initial load
+    fetchData('option1').then(() => fetchMetrics('option1'));
 });
 
 document.addEventListener("DOMContentLoaded", () => {
     const toggleSolarButton = document.getElementById("toggleSolarButton");
     let dataVisible = true;
 
-    toggleSolarButton.addEventListener("click", () => {
+    toggleSolarButton.addEventListener("click", async () => {
         const currentDataType = document.querySelector('#optionBox .option-box.selected').getAttribute('data-value');
         const label = currentDataType === 'option2' ? "State of Charge (%)" :
             currentDataType === 'option3' ? "Battery Power (KW)" :
@@ -405,11 +472,12 @@ document.addEventListener("DOMContentLoaded", () => {
             toggleSolarButton.textContent = "Show Solar Data";
             toggleSolarButton.classList.add("hidden");
         } else {
-            fetchData(currentDataType);
+            await fetchData(currentDataType);
             toggleSolarButton.textContent = "Hide Solar Data";
             toggleSolarButton.classList.remove("hidden");
         }
         dataVisible = !dataVisible;
+        await fetchMetrics(currentDataType);
     });
 });
 
@@ -440,6 +508,8 @@ async function fetchInitialData() {
         if (dataset4.classList.contains('active')) await fetchProportionalData(useSelected, currentDataType);
         if (dataset5.classList.contains('active')) await fetchAveragedData(useSelected, currentDataType);
         if (dataset6.classList.contains('active')) await fetch70_60Data(useSelected, currentDataType);
+
+        await fetchMetrics(currentDataType);
     } catch (error) {
         console.error("Error fetching initial data:", error);
     }
@@ -466,6 +536,8 @@ async function handleFormSubmit(event) {
         if (dataset4.classList.contains('active')) await fetchProportionalData(useSelected, currentDataType);
         if (dataset5.classList.contains('active')) await fetchAveragedData(useSelected, currentDataType);
         if (dataset6.classList.contains('active')) await fetch70_60Data(useSelected, currentDataType);
+
+        await fetchMetrics(currentDataType, startDate, endDate);
     } catch (error) {
         console.error("Error fetching selected date data:", error);
     }
@@ -480,7 +552,6 @@ function updateChart(data, dataType = 'option1', initialLabel = null, initialCol
             "Solar Power (KW)";
 
     if (!window.myChart) {
-        // Initial chart creation
         window.myChart = new Chart(ctx, {
             type: "line",
             data: {
@@ -524,7 +595,6 @@ function updateChart(data, dataType = 'option1', initialLabel = null, initialCol
             }
         });
     } else {
-        // Update existing chart (only if initial load or toggleSolarButton)
         if (data.length > 0 && !initialLabel) {
             window.myChart.data.labels = dates;
             window.myChart.data.datasets = window.myChart.data.datasets.filter(ds => ds.label !== label);
@@ -557,4 +627,4 @@ function stickyTopBar() {
 }
 
 // Initial fetch
-fetchData('option1');
+fetchData('option1').then(() => fetchMetrics('option1'));
