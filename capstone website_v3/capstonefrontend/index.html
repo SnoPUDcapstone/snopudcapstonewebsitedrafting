@@ -14,7 +14,7 @@
         <div class="right-text">
             <a href="about.html" class="headerlink">About </a>
             <a href="results.html" class="headerlink">Results </a>
-            <a href="Financialanalysis.html" class="headerlink">Financial Analysis </a>
+            <a href="Financialanalysis.html" class="headerlink">Documentation </a>
             <img src="resources\snohomishlogo.png" width="9%" height="9%" />
             <img src="resources\UWlogo.png" width="5%" height="5%" />
         </div>
@@ -53,15 +53,26 @@
             <canvas id="dataChart"></canvas>
         </div>
 
-        <div id="dataset1" class="dataset-box">30_30</div>
-        <div id="dataset2" class="dataset-box">30_60</div>
-        <div id="dataset3" class="dataset-box">trend</div>
-        <div id="dataset4" class="dataset-box">Proportional</div>
-        <div id="dataset5" class="dataset-box">Averaged</div>
-        <div id="dataset6" class="dataset-box">70_60</div>
-
+        <div id="datasetBox">
+            <div id="dataset1" class="dataset-box">30_30</div>
+            <div id="dataset2" class="dataset-box">30_60</div>
+            <div id="dataset6" class="dataset-box">70_60</div>
+            <div id="dataset3" class="dataset-box">trend</div>
+            <div id="dataset4" class="dataset-box">Proportional</div>
+            <div id="dataset5" class="dataset-box">Averaged</div>
+        </div>
         <!-- add analitics for currently selected datasets -->
-        <h1>Analytics</h1>
+        <!-- Metrics Box -->
+        <div id="metrics-box">
+            <h3>Key Metrics</h3>
+            <p>Solar: <span id="solar-value">0</span> KWh</p>
+            <p>30_30 --------- RMSE: <span id="dataset1-rmse">0</span> MAE: <span id="dataset1-mae">0</span> MSE: <span id="dataset1-mse">0</span> Battery Cycles: <span id="dataset1-cycles">0</span> Energy Out: <span id="dataset1-energy">0</span> KWh</p>
+            <p>30_60 --------- RMSE: <span id="dataset2-rmse">0</span> MAE: <span id="dataset2-mae">0</span> MSE: <span id="dataset2-mse">0</span> Battery Cycles: <span id="dataset2-cycles">0</span> Energy Out: <span id="dataset2-energy">0</span> KWh</p>
+            <p>30_70 --------- RMSE: <span id="dataset3-rmse">0</span> MAE: <span id="dataset3-mae">0</span> MSE: <span id="dataset3-mse">0</span> Battery Cycles: <span id="dataset3-cycles">0</span> Energy Out: <span id="dataset3-energy">0</span> KWh</p>
+            <p>Trend ---------- RMSE: <span id="dataset4-rmse">0</span> MAE: <span id="dataset4-mae">0</span> MSE: <span id="dataset4-mse">0</span> Battery Cycles: <span id="dataset4-cycles">0</span> Energy Out: <span id="dataset4-energy">0</span> KWh</p>
+            <p>Proportional -- RMSE: <span id="dataset5-rmse">0</span> MAE: <span id="dataset5-mae">0</span> MSE: <span id="dataset5-mse">0</span> Battery Cycles: <span id="dataset5-cycles">0</span> Energy Out: <span id="dataset5-energy">0</span> KWh</p>
+            <p>Averaged ------ RMSE: <span id="dataset6-rmse">0</span> MAE: <span id="dataset6-mae">0</span> MSE: <span id="dataset6-mse">0</span> Battery Cycles: <span id="dataset6-cycles">0</span> Energy Out: <span id="dataset6-energy">0</span> KWh</p>
+        </div>
         <script src="script.js"></script>
     </div>
 </body>
