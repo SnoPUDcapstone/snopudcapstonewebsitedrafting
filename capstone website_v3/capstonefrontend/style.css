@@ -243,3 +243,93 @@ button {
     padding: 0 10px;
     box-sizing: border-box;
 }
+
+#datasetBox {
+    margin-bottom: 30px; /* Adjust this to increase gap */
+    text-align: center;
+}
+
+
+/* Metrics Box Styling - Dark Theme with Flexbox for Alignment */
+#metrics-box {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    border-radius: 8px;
+    padding: 15px;
+    max-width: 900px;
+    margin: 0 auto 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: #ecf0f1;
+}
+
+    #metrics-box h3 {
+        margin: 0 0 10px 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: #ffffff;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Row styling with flexbox and adjusted gap */
+    #metrics-box p {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px; /* Reduced from 15px to 10px for balance */
+        margin: 4px 0;
+        padding: 8px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 5px;
+        font-size: 14px;
+        transition: transform 0.2s ease, background-color 0.2s ease;
+        align-items: center;
+    }
+
+        /* Hover effect */
+        #metrics-box p:hover {
+            transform: translateY(-2px);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Style for labels and values */
+        #metrics-box p span {
+            font-weight: 700;
+            color: #f1c40f;
+            display: inline-block;
+            min-width: 40px;
+            text-align: left;
+            margin-left: 5px; /* Added to reduce gap between label and value */
+        }
+
+        /* Specific styling for Solar row */
+        #metrics-box p:first-child {
+            justify-content: center;
+            font-size: 16px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Dataset-specific colors for values */
+        #metrics-box p:nth-child(2) span {
+            color: #e74c3c;
+        }
+        /* Dataset 1 - Red */
+        #metrics-box p:nth-child(3) span {
+            color: #2ecc71;
+        }
+        /* Dataset 2 - Green */
+        #metrics-box p:nth-child(4) span {
+            color: #e67e22;
+        }
+        /* Dataset 3 - Orange */
+        #metrics-box p:nth-child(5) span {
+            color: #9b59b6;
+        }
+        /* Dataset 4 - Purple */
+        #metrics-box p:nth-child(6) span {
+            color: #1abc9c;
+        }
+        /* Dataset 5 - Cyan */
+        #metrics-box p:nth-child(7) span {
+            color: #ff6b81;
+        }
+/* Dataset 6 - Pink */
