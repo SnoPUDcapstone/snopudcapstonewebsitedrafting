@@ -1380,12 +1380,12 @@ def get_metrics():
 
         metrics = {
             'solar': round(solarkwh, 2),
-            'dataset1': {'rmse': 1.2, 'mae': 0.8, 'mse': 1.44, 'cycles': round(per3030cycles, 2), 'energy': round(per3030kwh, 2)},
-            'dataset2': {'rmse': 1.5, 'mae': 0.9, 'mse': 2.25, 'cycles': round(per3060cycles, 2), 'energy': round(per3060kwh, 2)},
-            'dataset3': {'rmse': 1.1, 'mae': 0.7, 'mse': 1.21, 'cycles': round(per7060cycles, 2), 'energy': round(per7060kwh, 2)},
-            'dataset4': {'rmse': 1.3, 'mae': 0.85, 'mse': 1.69, 'cycles': round(trendcycles, 2), 'energy': round(trendkwh, 2)},
-            'dataset5': {'rmse': 1.4, 'mae': 0.95, 'mse': 1.96, 'cycles': round(proportionalcycles, 2), 'energy': round(proportionalkwh, 2)},
-            'dataset6': {'rmse': 1.0, 'mae': 0.6, 'mse': 1.0, 'cycles': round(averagedcycles, 2), 'energy': round(averagedkwh, 2)}
+            'dataset1': {'rmse': 62.62, 'mae': 30.09, 'mse': round(62.62**2, 2), 'cycles': round(per3030cycles, 2), 'energy': round(per3030kwh, 2)},
+            'dataset2': {'rmse': 60.23, 'mae': 27.15, 'mse': round(60.23 ** 2, 2), 'cycles': round(per3060cycles, 2), 'energy': round(per3060kwh, 2)},
+            'dataset3': {'rmse': 77.29, 'mae': 37.88, 'mse': round(77.29 ** 2, 2), 'cycles': round(per7060cycles, 2), 'energy': round(per7060kwh, 2)},
+            'dataset4': {'rmse': 58.18, 'mae': 25.11, 'mse': round(58.18 ** 2, 2), 'cycles': round(trendcycles, 2), 'energy': round(trendkwh, 2)},
+            'dataset5': {'rmse': 57.73, 'mae': 25.22, 'mse': round(57.73 ** 2, 2), 'cycles': round(proportionalcycles, 2), 'energy': round(proportionalkwh, 2)},
+            'dataset6': {'rmse': 61.33, 'mae': 27.49, 'mse': round(61.33 ** 2, 2), 'cycles': round(averagedcycles, 2), 'energy': round(averagedkwh, 2)}
         }
     else:
 
@@ -1404,14 +1404,15 @@ def get_metrics():
         proportionalcycles = (np.abs(((solar_data[1440:]-proportional_dat)/60)).sum())/1400
         averagedcycles = (np.abs(((solar_data[1440:]-avg_dat)/60)).sum())/1400
 
+        
         metrics = {
             'solar': round(solarkwh, 2),
-            'dataset1': {'rmse': 1.2, 'mae': 0.8, 'mse': 1.44, 'cycles': round(per3030cycles, 2), 'energy': round(per3030kwh, 2)},
-            'dataset2': {'rmse': 1.5, 'mae': 0.9, 'mse': 2.25, 'cycles': round(per3060cycles, 2), 'energy': round(per3060kwh, 2)},
-            'dataset3': {'rmse': 1.1, 'mae': 0.7, 'mse': 1.21, 'cycles': round(per7060cycles, 2), 'energy': round(per7060kwh, 2)},
-            'dataset4': {'rmse': 1.3, 'mae': 0.85, 'mse': 1.69, 'cycles': round(trendcycles, 2), 'energy': round(trendkwh, 2)},
-            'dataset5': {'rmse': 1.4, 'mae': 0.95, 'mse': 1.96, 'cycles': round(proportionalcycles, 2), 'energy': round(proportionalkwh, 2)},
-            'dataset6': {'rmse': 1.0, 'mae': 0.6, 'mse': 1.0, 'cycles': round(averagedcycles, 2), 'energy': round(averagedkwh, 2)}
+            'dataset1': {'rmse': 62.62, 'mae': 30.09, 'mse': round(62.62**2, 2), 'cycles': round(per3030cycles, 2), 'energy': round(per3030kwh, 2)},
+            'dataset2': {'rmse': 60.23, 'mae': 27.15, 'mse': round(60.23 ** 2, 2), 'cycles': round(per3060cycles, 2), 'energy': round(per3060kwh, 2)},
+            'dataset3': {'rmse': 77.29, 'mae': 37.88, 'mse': round(77.29 ** 2, 2), 'cycles': round(per7060cycles, 2), 'energy': round(per7060kwh, 2)},
+            'dataset4': {'rmse': 58.18, 'mae': 25.11, 'mse': round(58.18 ** 2, 2), 'cycles': round(trendcycles, 2), 'energy': round(trendkwh, 2)},
+            'dataset5': {'rmse': 57.73, 'mae': 25.22, 'mse': round(57.73 ** 2, 2), 'cycles': round(proportionalcycles, 2), 'energy': round(proportionalkwh, 2)},
+            'dataset6': {'rmse': 61.33, 'mae': 27.49, 'mse': round(61.33 ** 2, 2), 'cycles': round(averagedcycles, 2), 'energy': round(averagedkwh, 2)}
         }
     return jsonify(metrics)
 
