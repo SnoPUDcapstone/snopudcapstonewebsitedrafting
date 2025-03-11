@@ -728,7 +728,7 @@ def trend_model():
                 max_correction = 50
                 max_solar_limit = 450
             else:
-                max_correction = 25
+                max_correction = 30
                 max_solar_limit = 500
 
             # Check if the indices are within the data range and compute the average
@@ -769,50 +769,57 @@ def trend_model():
 def trend_model_selected():
     global time_data_selected, solar_data_selected, trend_selected_dat
     if solar_data_selected is not None and time_data_selected is not None:  # Check both solar_data and time_data
-        data = solar_data_selected[1440:]  # Use only the last 24 hours (assuming 2880 total minutes)
-        predictions = []
-        for hour in range(len(data) // 60):  # Loop over the data
-            # target_time = time_data_selected[hour]
-            # Find the indices of the last 60 minutes of data (1 hour back)
-            start_idx = hour * 60 - 31 
-            end_idx = hour * 60 - 30 
-            curr_hour = hour * 60
 
-            curr_hour = datetime.fromtimestamp(curr_hour)  # Convert to datetime
-            month = curr_hour.month
-            
-            # Set max_correction based on the month
-            if month in [6, 7, 8]:  # June, July, August
-                max_correction = 50
-                max_solar_limit = 450
+        df_trend_sel = pd.DataFrame({'Date & Time': time_data_selected, 'Solar [kW]': solar_data_selected})
+
+        # Ensure the 'Date & Time' column is sorted and in datetime format
+        df_trend_sel['Date & Time'] = pd.to_datetime(df_trend_sel['Date & Time'])
+        df_trend_sel = df_trend_sel.sort_values(by='Date & Time').reset_index(drop=True)
+        df_trend_sel['Month'] = df_trend_sel['Date & Time'].dt.month
+        trend_forecast = np.zeros(len(df_trend_sel))
+
+        for hour in range((len(df_trend_sel) // 60) - 1):
+            curr_hour = hour * 60  # Correct starting index
+
+            past_start_idx = curr_hour - 31
+            past_end_idx = curr_hour - 30
+
+            if past_start_idx < 0 or past_end_idx < 0:
+                continue
+
+            past_avg = df_trend_sel.loc[past_start_idx:past_end_idx, 'Solar [kW]'].mean()
+            trend_window = df_trend_sel.loc[past_start_idx:past_end_idx]
+
+            if len(trend_window) < 2:
+                recent_slope = 0
             else:
-                max_correction = 25
-                max_solar_limit = 500
+                time_diff = (trend_window['Date & Time'].diff().dt.total_seconds() / 60).dropna()
+                power_diff = trend_window['Solar [kW]'].diff().dropna()
+                rate_of_change = power_diff / time_diff
+                recent_slope = rate_of_change.mean()
 
-            if start_idx < end_idx:
-                total_avg = (data[start_idx] + data[end_idx]) / 2
-
-            if start_idx >= 0 and end_idx >= 0:
-                past_window =data[start_idx:end_idx]
-            else:
-                past_window = []
-
-            if len(past_window) >= 2:
-                recent_slope = (data[end_idx] - data[start_idx]) / (end_idx - start_idx)
-            else:
-                recent_slope = 0  # No valid slope if there's insufficient data
+            # Set month-based correction
+            current_month = df_trend_sel.loc[curr_hour, 'Month']
+            max_solar_limit = 445 if current_month in [6, 7, 8] else 500
+            max_correction = 50 if current_month in [6, 7, 8] else 30
 
             correction = np.clip(recent_slope * 30, -max_correction, max_correction)
 
-            forecasted_value = np.clip(total_avg + correction, 0, max_solar_limit)
-            predictions.extend([forecasted_value] * 60)
-        
-        predictions = predictions[:len(time_data_selected[1440:])]
+            # Assign forecasted value
+            trend_forecast[curr_hour:curr_hour+60] = np.clip(past_avg + correction, 0, max_solar_limit)
 
-        trend_selected_dat = predictions
+        # Store results
+        df_trend_sel['Trend_Forecast'] = trend_forecast
+        df_trend_filtered = df_trend_sel.iloc[1440:]  # Keep last 24 hours
+
+        # Convert to numpy for output
+        timetrendselected = df_trend_filtered['Date & Time'].to_numpy()
+        solartrendselected = df_trend_filtered['Trend_Forecast'].to_numpy()
+
+        trend_selected_dat = solartrendselected
 
         result = [{"Date and Time": str(t), "Value (KW)": float(p)} 
-                  for t, p in zip(time_data_selected[1440:], predictions)]
+                  for t, p in zip(timetrendselected, solartrendselected)]
         
         return jsonify(result)
     else:
@@ -1420,3 +1427,4 @@ if __name__ == '__main__':
     except ValueError:
         PORT = 5555
     app.run(host=HOST, port=PORT, debug=False)
+
