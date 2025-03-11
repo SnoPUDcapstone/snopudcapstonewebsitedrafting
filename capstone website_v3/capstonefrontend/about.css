@@ -314,3 +314,42 @@ h2 {
     color: #555;
     line-height: 1.5;
 }
+
+.models {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    margin-top: 20px;
+}
+
+.model {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}
+
+.model-name {
+    flex: 1;
+    background-color: #ddd;
+    padding: 15px;
+    text-align: center;
+    font-weight: bold;
+    border-radius: 6px;
+    min-width: 150px;
+}
+
+.model-description {
+    flex: 3;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 6px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
+    color: #434242;
+    text-align: left;
+}

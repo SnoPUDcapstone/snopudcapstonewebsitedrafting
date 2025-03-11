@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Results - SnoPUD MicroGrid Analysis</title>
     <link rel="icon" type="image/jpg" href="resources\UWlogo2.jpg">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="about.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -13,7 +13,6 @@
         <div class="left-text"><a href="index.html" class="headerlink"> Snohomish PUD - Arlington Microgrid Solar Firming Pilot Project Analysis</a></div>
         <div class="right-text">
             <a href="about.html" class="headerlink">About </a>
-            <a href="livesolarfirming.html" class="headerlink">Live Solar Firming </a>
             <a href="results.html" class="headerlink">Results </a>
             <a href="documentation.html" class="headerlink"> Documentation </a>
             <img src="resources\snohomishlogo.png" width="9%" height="9%" />
@@ -22,7 +21,43 @@
     </div>
 
     <div class="content" id="content">
-        <h1>Model Documentation</h1>
+        <header>
+            <h1>Model Documentation</h1>
+        </header>
+        <section class="about-project">
+            <h2>BPA Models: Persistence Forecasting</h2>
+
+        <div class="models">
+            <div class="model">
+                <div class="model-name">30/60 30-Minute Persistence</div>
+                <div class="model-description">The first model that was recommended by Bonneville Power Administration and simulated, and the baseline for all other models. The predicted PV generation is the average PV generation of the half-hour a half-hour before the predicted hour.</div>
+            </div>
+            <div class="model">
+                <div class="model-name">30/60 1-Minute Persistence</div>
+                <div class="model-description">Bonneville Power Administration’s recommended model for microgrid implementing capacity firming. The predicted PV generation is the average PV generation of the minute a half-hour before the predicted hour.</div>
+            </div>
+            <div class="model">
+                <div class="model-name">70/60 1-Minute Persistence</div>
+                <div class="model-description">A variation of Bonneville Power Administration’s recommended persistence model for generators greater than 3MW. The predicted PV generation is the average PV generation of the minute, 70 minutes before the predicted hour. Although the Arlington microgrid is only 500kW, future solar projects the PUD may implement may be greater than 3MW, for in which case the forecast must be given 70 minutes prior to the forecasting hour.</div>
+            </div>
+        </div>
+
+        <section class="about-project">
+            <h2>Student Models</h2>
+            <div class="models">
+                <div class="model">
+                    <div class="model-name">Averaged Model:</div>
+                    <div class="model-description">A model that takes the weighted average between the “30/60 1-Minute Persistence” and the “Yesterday 60-Minute Persistence” predictions, as shown below. The most successful weights that were found were 60% Yesterday and 40% 1-Minute. .</div>
+                </div>
+                <div class="model">
+                    <div class="model-name">Proportional Model</div>
+                    <div class="model-description">The proportional forecasting model improves solar power prediction by comparing recent solar output to historical patterns and adjusting forecasts accordingly. It calculates the ratio between solar output 30 minutes before the forecast period on the same day (A) and 30 minutes before the forecast period on the previous day (B). If the ratio (A/B) is within an acceptable range (0.7 to 1.3), the model applies a proportional adjustment based on the ratio. If the ratio is outside the acceptable range, the model blends the current day's value (A) with the previous day’s value using a weighted approach (60% A and 40% previous day) for stability. To maintain consistency, the model holds the forecast constant within each 60-minute block.</div>
+                </div>
+                <div class="model">
+                    <div class="model-name">Trend Model</div>
+                    <div class="model-description">The trend model uses the rate of change from 31 minutes to 30 minutes before the forecasting hour to generate a correction value. This value is multiplied by 30 and is added / subtracted to the 1-minute average from 31 minutes to 30 minutes before the forecasting hour. Correction is capped to 50kW in the summer months (June, July, August) when solar output is higher and more consistent, and 30kW the rest of the year to avoid over or under correction for extreme values.</div>
+                </div>
+            </div>
     </div>
 </body>
 </html>
