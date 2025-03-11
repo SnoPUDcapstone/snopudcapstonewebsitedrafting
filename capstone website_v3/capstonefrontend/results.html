@@ -27,24 +27,93 @@
         <div class="maincontent">
             <div class="prelim">
                 <h2>Preliminary Research</h2>
+                <p>In the early phases of development on this project we focused on understanding the key topics of this project. Largely we researched the needs of the energy imbalance market, and solar firming to define the scope of the project. We settled on finding a methodology to firm solar output using a battery for one hour with a prediction point 30 minutes prior to the forecasted hour. This allows us to satisfy the requirements of the BPA for this project in order to avoid the 5400$ tariff charged to SnoPUD for a lack of solar firming.</p>
             </div>
             <div class="performance">
                 <h2>Performance Metrics</h2>
+                <p>Each of our models was ran through a battery pipeline that calculated key metrics over a year’s worth of data. This pipeline evaluated RMSE, MAE, and critically battery degradation, this was then extrapolated to find the degradation over 20 years worth and compared to the other models. </p>
             </div>
             <div class="modeling">
-                <h2>Modeling Procedure / System Design</h2>
+                <h2>Modeling Procedure</h2>
+                <p>In order to maximize the efficiency of the work done we each constructed our own battery models, the output of these models were tabularized a ran through the same battery pipeline in order to uniformly evaluate the relevant metrics.</p>
             </div>
             <div class="best">
                 <h2>Best Models</h2>
+                <p>Given our constraints, the models we evaluated to have the lowest RMSE were the Trend model, the Proportional model, and the Averaged model. Further documentation regarding these specific models can be found at the ‘Documentation’ link. </p>
             </div>
             <div class="finance">
                 <h2>Financial Analysis</h2>
+                <h4>Battery Degradation Comparison </h4>
+                <table>
+                    <tr>
+                        <th>Model</th>
+                        <th>Discharge Cycles</th>
+                        <th>20 year Kwh replaced</th>
+                        <th>Kwh from base</th>
+                    </tr>
+                    <tr>
+                        <td>proportional</td>
+                        <td>40.58</td>
+                        <td>97.24</td>
+                        <td>38.83</td>
+                    </tr>
+                    <tr>
+                        <td>Trend</td>
+                        <td>49.12</td>
+                        <td>124.57</td>
+                        <td>11.50</td>
+                    </tr>
+                    <tr>
+                        <td>Averaged</td>
+                        <td>49.77</td>
+                        <td>126.78</td>
+                        <td>9.28</td>
+                    </tr>
+                    <tr>
+                        <td>30/60 (base)</td>
+                        <td>52.42</td>
+                        <td>136.06</td>
+                        <td>0.00</td>
+                    </tr>
+                </table>
+
+                <h4>Energy Loss Comparison </h4>
+                <table>
+                    <tr>
+                        <th>Model</th>
+                        <th>Power Loss/Year</th>
+                        <th>Revenue Loss/Year</th>
+                        <th>Savings from Base Case</th>
+                    </tr>
+                    <tr>
+                        <td>proportional</td>
+                        <td>6244.35</td>
+                        <td>$312.22</td>
+                        <td>$29.81</td>
+                    </tr>
+                    <tr>
+                        <td>Trend</td>
+                        <td>6544.70</td>
+                        <td>$327.24</td>
+                        <td>$14.79</td>
+                    </tr>
+                    <tr>
+                        <td>Averaged</td>
+                        <td>7174.94</td>
+                        <td>$358.75</td>
+                        <td>$-16.72</td>
+                    </tr>
+                    <tr>
+                        <td>70/60 (base)</td>
+                        <td>6840.49</td>
+                        <td>$342.02</td>
+                        <td>$0.00</td>
+                    </tr>
+                </table>
             </div>
             <div class="future">
                 <h2>Future Work</h2>
-            </div>
-            <div class="resources">
-                <h2>Resources</h2>
+                <p>Going forward we intend to dive further into the financial analysis of these models as well as producing new models that may optimize the battery usage to provide further cost benefit when loads are high. This could also include looking at machine learning alternatives for solar firming and forecasting. These results will be verified through real world implementation of our models.</p>
             </div>
         </div>
     </div>
